@@ -1,11 +1,9 @@
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const express = require("express");
-require('dotenv').config();
-
+require("dotenv").config();
 
 const app = express();
-const PORT = 3000;
 
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -20,10 +18,23 @@ app.use("/registration", registrationController);
 const authorizationController = require("./controllers/authorizationController");
 app.use("/authorization", authorizationController);
 
-app.listen(PORT, (err) => {
+const http = require("http");
+const socketIo = require("socket.io");
+const { socketHandler } = require("./controllers/socketController");
+const server = http.createServer(app);
+const io = socketIo(server);
+io.on("connection", (socket) => {
+  socketHandler(socket, io);
+});
+
+server.listen(process.env.SOCKET_PORT, () => {
+  console.log(`Socket.io has been started on ${process.env.SOCKET_PORT}`);
+});
+
+app.listen(process.env.SERVER_PORT, (err) => {
   if (err) {
     console.log(err);
     return;
   }
-  console.log(`Server has been started on ${PORT}...`);
+  console.log(`Server has been started on ${process.env.SERVER_PORT}...`);
 });

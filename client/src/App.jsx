@@ -43,7 +43,6 @@ export default function App() {
           <Route path="/auth" element={<AuthorizationFormContainer />} />
           <Route path="/chats" element={<ChatsContainer />} />
         </Routes>
-        {currentUser ? currentUser.UserName : ""}
       </UserContext>
     </>
   );

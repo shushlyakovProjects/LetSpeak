@@ -55,9 +55,33 @@
     }
   }
 
-  textarea {
+  .textarea {
     height: 120px;
     border: 1px solid rgba(245, 245, 245, 0.2);
-    color: vars.$text_white_color;
+    
+    position: relative;
+    display: flex;
+
+    textarea{
+      flex-grow: 1;
+      color: vars.$text_white_color;
+    }
+
+    &__button {
+      right: 0;
+      bottom: 0;
+      font-size: 1.5rem;
+      background-color: vars.$accent_yellow_color;
+      color: vars.$background_gray_color;
+      opacity: 0.3;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-left: 15px;
+
+      &:hover{
+        opacity: 0.7;
+      }
+    }
   }
 }
