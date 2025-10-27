@@ -35,7 +35,7 @@ export default function RegistrationFormPresentation({ tryRegistration, handleEr
         <input type="password" placeholder="Повторите пароль" {...register("passwordRepeat", { required: true })} />
       </div>
       <div className={style["form__field-btns"]}>
-        <p className={style["error"]}>{errorMessage}</p>
+        <p className="error">{errorMessage}</p>
         <input type="submit" value="Создать аккаунт" />
         <Link className="link" to={'/auth'}>У меня есть аккаунт</Link>
       </div>

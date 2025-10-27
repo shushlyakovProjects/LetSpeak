@@ -17,7 +17,7 @@ export default function AuthorizationFormPresentation({ tryLogin, handleError, e
         <input type="password" placeholder="Введите пароль" {...register("password", {required: "Укажите пароль!"})} />
       </div>
       <div className={style["form__field-btns"]}>
-        <p className={style["error"]}>{errorMessage}</p>
+        <p className="error">{errorMessage}</p>
         <input type="submit" value="Войти в аккаунт" />
         <Link className="link" to={'/reg'}>У меня нет аккаунта</Link>
       </div>
