@@ -17,4 +17,4 @@
 ## База данных
 ### Таблицы:
 * users: UserId, UserName, UserLogin, UserPassword
-* messages: MessageId, MessageSender, MessageContent, MessageDate 
+* messages: MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageDate 

@@ -24,6 +24,7 @@
 
     &__message {
       padding: 10px;
+      padding-right: 30px;
       border-radius: 10px 10px 10px 0px;
       border: 1px solid rgba(245, 245, 245, 0.2);
       width: auto;
@@ -46,6 +47,17 @@
         bottom: 5px;
         font-size: 0.7rem;
         opacity: 0.5;
+      }
+      &-delete{
+        filter: brightness(0.6);
+        position: absolute;
+        right: 0px;
+        top: 0px;
+        font-size: 0.6rem;
+        &:hover{
+          color: vars.$error_red_color;
+          filter: brightness(1);
+        }
       }
     }
     &__myMessage {
