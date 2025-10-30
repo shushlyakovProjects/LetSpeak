@@ -4,12 +4,7 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const connectionDB = require("./dbController");
-
-
-function generateAccessToken(login) {
-  const payload = { login };
-  return jwt.sign(payload, process.env.SECRET_ACCESS_KEY, { expiresIn: "24h" });
-}
+const { generateAccessToken } = require("./functions");
 
 router.post("/", (req, res) => {
   if (req.cookies.ACCESS_TOKEN) {
@@ -21,8 +16,8 @@ router.post("/", (req, res) => {
 
       const findUserQuery = `SELECT * FROM users WHERE UserLogin = '${login}'`;
       connectionDB.query(findUserQuery, (err, currentUser) => {
-        if (err) {
-          res.status(401).send("Пользователь не найден в базе");
+        if (err || currentUser.length == 0) {
+          res.cookie("ACCESS_TOKEN", "", { maxAge: -1 }).status(401).send("Пользователь не найден в базе");
         } else {
           currentUser[0].UserPassword = "***";
           res.status(200).json(currentUser[0]);

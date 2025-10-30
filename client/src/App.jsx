@@ -15,6 +15,7 @@ export default function App() {
   // const dispathUser = useDispatch();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState("");
+  
 
   const tryLogin = () => {
     console.log("Checking authorization...");
@@ -32,6 +33,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    navigate("/auth");
     tryLogin();
   }, []);
 

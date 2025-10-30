@@ -7,15 +7,17 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:3000/",
+        target: "http://77.39.115.27:3000",
+        // target: "http://localhost:3000/",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
+        // rewrite: (path) => path.replace(/^\/api/, ""),
       },
-      "/socket.io": {
-        // target: 'http://26.126.134.249:4000',
-        target: "http://localhost:4000",
+      "/socket": {
+        target: "http://77.39.115.27:4000",
+        // target: "http://localhost:4000",
         changeOrigin: true,
         ws: true,
+        // rewrite: (path) => path.replace(/^\/socket\.io/, ""),
       },
     },
   },

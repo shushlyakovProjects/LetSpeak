@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { generateAccessToken } = require("./functions");
 
 // librires
 const bcrypt = require("bcryptjs");
@@ -12,7 +13,7 @@ router.post("/", (req, res) => {
   connectionDB.query(checkQuery, (err, result) => {
     if (err) {
       console.log(err);
-      res.status(500).send('База данных недоступна')
+      res.status(500).send("База данных недоступна");
     } else {
       if (result.length) {
         res.status(501).send("Данный логин уже занят!");
@@ -26,7 +27,8 @@ router.post("/", (req, res) => {
           if (err) {
             res.status(500).send(err);
           } else {
-            res.status(200).send("Регистрация прошла успешно!");
+            const token = generateAccessToken(login);
+            res.cookie("ACCESS_TOKEN", token, { maxAge: 86400000 }).status(200).json({ UserName: username, UserLogin: login });
           }
         });
       }

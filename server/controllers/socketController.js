@@ -2,7 +2,13 @@ const connectionDB = require("./dbController");
 
 module.exports = {
   socketHandler: (socket, io) => {
-    console.log("New socket client!");
+    console.log('New socket client!');
+    
+
+    socket.on("connectToSocket", (login) => {
+      socket.UserLogin = login;
+      console.log(`Client with login ${login} has been connected to Socket!`);
+    });
 
     socket.on("getGeneralChat", () => {
       const selectQuery = "SELECT * FROM messages";
@@ -53,6 +59,10 @@ module.exports = {
           });
         }
       });
+    });
+
+    socket.on("disconnect", () => {
+      console.log(`Client with ${socket.UserLogin} has been disconnected.`);
     });
   },
 };

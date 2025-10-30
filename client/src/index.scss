@@ -36,12 +36,13 @@ button{
 a,
 .link {
   text-decoration: none;
-  color: gray;
+  color: vars.$text_white_color;
   transition-duration: 0.3s;
 }
 a:hover,
 .link:hover, button:hover {
   color: vars.$accent_yellow_color;
+  cursor: pointer;
 }
 
 input {
@@ -51,7 +52,7 @@ input {
   text-align: center;
   margin-top: 5px;
   background-color: transparent;
-  border-bottom: 1px solid gray;
+  border-bottom: 1px solid vars.$text_white_color;
   color: vars.$accent_yellow_color;
   font-size: 1rem;
 }
@@ -60,17 +61,17 @@ input:focus {
 }
 input[type="submit"] {
   padding: 10px 25px;
-  border: 1px solid gray;
-  color: gray;
+  border: 1px solid vars.$background_gray_color;
+  color: vars.$background_gray_color;
+  background-color: vars.$accent_yellow_color;
   transition-duration: 0.3s;
-  opacity: 0.4;
   will-change: transform;
 }
 input[type="submit"]:hover {
-  opacity: 1;
   cursor: pointer;
   background-color: vars.$accent_yellow_color;
   transform: translateY(-5px);
+  cursor: pointer;
 }
 input[type="submit"]:active {
   transition-duration: 0.1s;

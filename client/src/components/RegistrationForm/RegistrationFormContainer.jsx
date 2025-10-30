@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import RegistrationFormPresentation from "./RegistrationFormPresentation";
 import axios from "axios";
+import { UserContext } from "../../App";
+import { useNavigate } from "react-router-dom";
 
 export default function RegistrationFormContainer() {
   const [errorMessage, setErrorMessage] = useState("");
+  const { currentUser, setCurrentUser } = useContext(UserContext);
+  const navigate = useNavigate();
 
   function handleError(errFields) {
     // console.log(errFields);
@@ -20,13 +24,22 @@ export default function RegistrationFormContainer() {
     axios
       .post("/api/registration", data)
       .then((result) => {
-        console.log(result);
+        setCurrentUser(result.data);
       })
       .catch((error) => {
         console.log(error);
         setErrorMessage(error.response.data);
       });
   }
+
+  useEffect(() => {
+    console.log('Переадресация..');
+    
+    if (currentUser.hasOwnProperty("UserLogin")) {
+      console.log('Переадресация!!!');
+      navigate("/chats");
+    }
+  }, [currentUser]);
 
   return (
     <RegistrationFormPresentation

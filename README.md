@@ -18,3 +18,16 @@
 ### Таблицы:
 * users: UserId, UserName, UserLogin, UserPassword
 * messages: MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageDate 
+
+
+## Фиксы:
+* Разрез длинных слов
+* Уменьшить min-w сообщений +
+* Показывать под кем авторизовался +
+* Добать отправку по enter +
+* Сделать цвета контрастнее +
+* Стили кнопки исправить +
+* Перенос при регистрации +
+
+* Анимация при удалении
+* Скролл в начало диалога при отправке сообщения

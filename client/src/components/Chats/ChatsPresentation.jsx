@@ -1,26 +1,25 @@
-import React from "react";
 import style from "./Chats.module.scss";
-import { useState } from "react";
 
 export default function ChatsPresentation({
   logout,
   sendMessage,
   messages,
   currentUser,
-  textareaValue,
-  setTextareaValue,
+  chatRef,
   deleteMessage,
+  textareaRef,
 }) {
   return (
     <div className={style["wrapper"]}>
       <header>
         <h2>Общий чат</h2>
         <nav>
-          <button onClick={logout}>Выход</button>
+          <p>Ваш логин {currentUser.UserLogin}</p>
+          <button onClick={logout}>Сменить аккаунт</button>
         </nav>
       </header>
 
-      <div className={style["chat"]}>
+      <div className={style["chat"]} ref={chatRef}>
         {!messages.length
           ? "Сообщений пока нет. Будь первым! :)"
           : messages.map((message) => (
@@ -57,18 +56,22 @@ export default function ChatsPresentation({
       </div>
       <div className={style["textarea"]}>
         <textarea
-          value={textareaValue}
+          ref={textareaRef}
           placeholder="Сообщение..."
-          onInput={(e) => {
-            setTextareaValue(e.target.value);
+          onKeyDown={(e) => {
+            if (e.code == "Enter") {
+              e.preventDefault();
+              sendMessage(textareaRef.current.value);
+              textareaRef.current.value = "";
+            }
           }}
         ></textarea>
         <button
           className={style["textarea__button"]}
           title="Отправить"
           onClick={() => {
-            sendMessage();
-            setTextareaValue("");
+            sendMessage(textareaRef.current.value);
+            textareaRef.current.value = "";
           }}
         >
           ▶
