@@ -8,13 +8,19 @@ import { UserContext } from "../../App";
 import { useState } from "react";
 
 export default function ChatsContainer() {
+  const emojiPack = {
+    Эмоции: ["🤪", "😂", "🤗", "😁", "🫠", "😨", "😏"],
+    Жесты: ["🤚", "👋", "👌", "🤌", "✌️", "💪"],
+    Другое: ["❤️", "🤖", "🙈", "👀", "💩"],
+  };
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useContext(UserContext);
-  // const [textareaValue, setTextareaValue] = useState("");
   const [messages, setMessages] = useState([]);
+
   const textareaRef = useRef("");
   const chatRef = useRef(null);
   const socketApi = useRef(null);
+  const emojiRef = useRef(null)
 
   useEffect(() => {
     socketApi.current = io("");
@@ -42,6 +48,20 @@ export default function ChatsContainer() {
       socketApi.current.close();
     };
   }, []);
+
+  const addEmoji = (emoji) => {
+    const textarea = textareaRef.current;
+
+    const startPos = textarea.selectionStart;
+    const endPos = textarea.selectionEnd;
+
+    const infoBefore = textarea.value.substring(0, startPos);
+    const infoAfter = textarea.value.substring(endPos);
+
+    textarea.value = infoBefore + emoji + infoAfter;
+    textarea.setSelectionRange(startPos + emoji.length, startPos + emoji.length);
+    textarea.focus();
+  };
 
   const deleteMessage = (MessageId, MessageSenderLogin, MessageElement) => {
     if (MessageSenderLogin == currentUser.UserLogin) {
@@ -81,6 +101,9 @@ export default function ChatsContainer() {
       deleteMessage={deleteMessage}
       textareaRef={textareaRef}
       chatRef={chatRef}
+      emojiRef={emojiRef}
+      addEmoji={addEmoji}
+      emojiPack={emojiPack}
     ></ChatsPresentation>
   );
 }

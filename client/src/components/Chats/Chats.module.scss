@@ -45,7 +45,6 @@
       white-space: pre-line;
       word-wrap: break-word;
       overflow-wrap: anywhere;
-      transition-duration: 1s;
 
       &-user {
         color: vars.$accent_yellow_color;
@@ -82,37 +81,86 @@
   }
 
   .textarea {
-    height: 120px;
     border: 1px solid rgba(245, 245, 245, 0.2);
+    border-radius: 5px;
 
     position: relative;
-    // display: flex;
+    display: flex;
+    transition-duration: 0.4s;
+    transition-timing-function: ease-in;
 
-    textarea {
-      // flex-grow: 1;
-      width: 100%;
-      height: 100%;
+    &:has(textarea:focus) {
+      box-shadow: 0 0 8px vars.$accent_yellow_color;
+    }
+
+    .textarea__field {
+      flex-grow: 1;
       color: vars.$text_white_color;
 
-      &:focus ~ button {
+      &:focus ~ nav button {
         opacity: 0.7;
       }
     }
 
-    &__button {
-      font-size: 1.5rem;
-      background-color: vars.$accent_yellow_color;
-      color: vars.$background_gray_color;
-      opacity: 0.3;
+    &__nav {
       display: flex;
-      justify-content: center;
+      flex-direction: row;
       align-items: center;
-      padding-left: 15px;
-      position: absolute;
-      right: 0;
-      top: 0;
       height: 100%;
+      padding: 0px 5px;
+      position: relative;
+
+      &_emoji {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 0;
+        transform: translateY(-100%);
+        padding: 20px 0;
+
+        &-body {
+          width: 100%;
+          height: 100%;
+          border: 1px solid rgba(245, 245, 245, 0.2);
+          background-color: vars.$background_gray_color;
+          padding: 20px;
+          border-radius: 5px;
+        }
+
+        &-section {
+          margin-bottom: 10px;
+          p {
+            margin-bottom: 5px;
+          }
+        }
+
+        &-list {
+          list-style: none;
+          display: grid;
+          grid-template-columns: repeat(8, 1fr);
+          gap: 5px;
+
+          li {
+            font-size: 1.6rem;
+            text-align: center;
+            aspect-ratio: 1/1;
+            // background-color: red;
+            cursor: pointer;
+
+            &:hover {
+              transform: scale(1.1);
+            }
+          }
+        }
+      }
+    }
+
+    &__button {
+      font-size: 2rem;
+      opacity: 0.3;
+
       transition-duration: 0.4s;
+      height: 100%;
 
       &:hover {
         opacity: 1 !important;

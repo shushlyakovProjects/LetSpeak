@@ -30,7 +30,7 @@ io.on("connect", (socket) => {
   socketHandler(socket, io);
 });
 
-const IS_PRODACTION = false;
+const IS_PRODACTION = true;
 
 if (IS_PRODACTION) {
   server.listen(process.env.SERVER_PORT, () => {

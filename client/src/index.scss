@@ -86,12 +86,9 @@ textarea {
   padding: 10px;
   background-color: transparent;
   resize: none;
-  transition-duration: 0.4s;
-  transition-timing-function: ease-in;
 }
 textarea:focus {
   outline: 0;
-  box-shadow: 0 0 8px vars.$accent_yellow_color;
 }
 
 .error {
