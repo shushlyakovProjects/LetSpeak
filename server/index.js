@@ -30,16 +30,21 @@ io.on("connect", (socket) => {
   socketHandler(socket, io);
 });
 
-server.listen(process.env.SERVER_PORT, () => {
-  console.log(`Socket.io has been started on ${process.env.SOCKET_PORT}`);
-});
+const IS_PRODACTION = false;
 
-// app.listen(process.env.SERVER_PORT, (err) => {
-//   if (err) {
-//     console.log(err);
-//     return;
-//   }
-//   console.log(`Server has been started on ${process.env.SERVER_PORT}...`);
-// });
-
-
+if (IS_PRODACTION) {
+  server.listen(process.env.SERVER_PORT, () => {
+    console.log(`Server with Socket.io have been started on ${process.env.SOCKET_PORT}`);
+  });
+} else {
+  server.listen(process.env.SOCKET_PORT, () => {
+    console.log(`Socket.io has been started on ${process.env.SOCKET_PORT}`);
+  });
+  app.listen(process.env.SERVER_PORT, (err) => {
+    if (err) {
+      console.log(err);
+      return;
+    }
+    console.log(`Server has been started on ${process.env.SERVER_PORT}...`);
+  });
+}

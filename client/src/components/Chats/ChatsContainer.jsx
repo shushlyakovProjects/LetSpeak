@@ -26,7 +26,14 @@ export default function ChatsContainer() {
     });
 
     socketApi.current.on("loadGeneralMessage", (data) => {
-      data.MessageDate = `${new Date(data.MessageDate).getHours()}:${new Date(data.MessageDate).getMinutes()} `;
+      const date = new Date(data.MessageDate);
+      const numberOfMonth = (date) => (date.getMonth() + 1 < 10 ? "0" + (date.getMonth() + 1) : date.getMonth() + 1);
+      const numberOfDay = (date) => (date.getDate() < 10 ? "0" + date.getDate() : date.getDate());
+      if (numberOfDay(date) == numberOfDay(new Date()) && numberOfMonth(date) == numberOfMonth(new Date())) {
+        data.MessageDate = `${date.getHours()}:${date.getMinutes()} `;
+      } else {
+        data.MessageDate = `${numberOfDay(date)}.${numberOfMonth(date)} ${date.getHours()}:${date.getMinutes()} `;
+      }
       setMessages((prev) => [data, ...prev]);
     });
 
@@ -36,10 +43,13 @@ export default function ChatsContainer() {
     };
   }, []);
 
-  const deleteMessage = (MessageId, MessageSenderLogin) => {
+  const deleteMessage = (MessageId, MessageSenderLogin, MessageElement) => {
     if (MessageSenderLogin == currentUser.UserLogin) {
+      MessageElement.classList.add("deletingMessage");
       const MessageDeleted = { MessageId, MessageSenderLogin };
-      socketApi.current.emit("deleteGeneralMessage", MessageDeleted);
+      setTimeout(() => {
+        socketApi.current.emit("deleteGeneralMessage", MessageDeleted);
+      }, 600);
     }
   };
 
@@ -51,7 +61,7 @@ export default function ChatsContainer() {
     const MessageSenderName = currentUser.UserName;
     const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageDate };
     console.log(chatRef);
-    
+
     // chatRef.current.scrollTo({ top: -50, behavior: "smooth" });
     socketApi.current.emit("addGeneralMessage", messageInfo);
   };

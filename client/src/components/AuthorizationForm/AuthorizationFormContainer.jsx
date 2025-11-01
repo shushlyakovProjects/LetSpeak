@@ -19,8 +19,8 @@ export default function AuthorizationFormContainer() {
   }
 
   const tryLogin = (data) => {
-    console.log("Authorization...");
-    console.log(data);
+    // console.log("Authorization...");
+    // console.log(data);
     setErrorMessage("");
     axios
       .post("/api/authorization", data)

@@ -42,6 +42,10 @@
       min-width: auto;
       position: relative;
       align-self: start;
+      white-space: pre-line;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+      transition-duration: 1s;
 
       &-user {
         color: vars.$accent_yellow_color;
@@ -90,7 +94,7 @@
       height: 100%;
       color: vars.$text_white_color;
 
-      &:focus ~ button{
+      &:focus ~ button {
         opacity: 0.7;
       }
     }

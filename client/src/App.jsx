@@ -44,6 +44,7 @@ export default function App() {
           <Route path="/reg" element={<RegistrationFormContainer />} />
           <Route path="/auth" element={<AuthorizationFormContainer />} />
           <Route path="/chats" element={<ChatsContainer />} />
+          <Route path="/" element={<ChatsContainer />} />
         </Routes>
       </UserContext>
     </>

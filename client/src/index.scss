@@ -16,17 +16,17 @@ html {
   font-size: 16px;
 }
 
-header{
+header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-nav{
+nav {
   display: flex;
   align-items: center;
 }
-button{
+button {
   background-color: transparent;
   padding: 8px 10px;
   border: 0;
@@ -40,7 +40,8 @@ a,
   transition-duration: 0.3s;
 }
 a:hover,
-.link:hover, button:hover {
+.link:hover,
+button:hover {
   color: vars.$accent_yellow_color;
   cursor: pointer;
 }
@@ -107,4 +108,19 @@ textarea:focus {
   border-radius: 10px;
 }
 
+.deletingMessage {
+  animation: animDeletingMessage .5s ease 1 forwards;
+}
 
+@keyframes animDeletingMessage {
+  0% {
+    transform: translate(0px, 0px);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translate(10px, -10px);
+    opacity: 0;
+    filter: blur(5px);
+  }
+}

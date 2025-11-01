@@ -1,5 +1,7 @@
 import style from "./Chats.module.scss";
 
+import { TransitionGroup, CSSTransition } from "react-transition-group";
+
 export default function ChatsPresentation({
   logout,
   sendMessage,
@@ -14,7 +16,7 @@ export default function ChatsPresentation({
       <header>
         <h2>Общий чат</h2>
         <nav>
-          <p>Ваш логин {currentUser.UserLogin}</p>
+          <p>Вошли как {currentUser.UserLogin}</p>
           <button onClick={logout}>Сменить аккаунт</button>
         </nav>
       </header>
@@ -42,8 +44,8 @@ export default function ChatsPresentation({
                   <button
                     className={style["chat__message-delete"]}
                     title="Удалить"
-                    onClick={() => {
-                      deleteMessage(message.MessageId, message.MessageSenderLogin);
+                    onClick={(e) => {
+                      deleteMessage(message.MessageId, message.MessageSenderLogin, e.target.closest("div"));
                     }}
                   >
                     Х
@@ -60,9 +62,11 @@ export default function ChatsPresentation({
           placeholder="Сообщение..."
           onKeyDown={(e) => {
             if (e.code == "Enter") {
-              e.preventDefault();
-              sendMessage(textareaRef.current.value);
-              textareaRef.current.value = "";
+              if (!e.shiftKey) {
+                e.preventDefault();
+                sendMessage(textareaRef.current.value);
+                textareaRef.current.value = "";
+              }
             }
           }}
         ></textarea>
@@ -72,6 +76,7 @@ export default function ChatsPresentation({
           onClick={() => {
             sendMessage(textareaRef.current.value);
             textareaRef.current.value = "";
+            chatRef.current.scrollTo(0,0)
           }}
         >
           ▶
