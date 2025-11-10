@@ -17,10 +17,15 @@ export default function ChatsContainer() {
   const { currentUser, setCurrentUser } = useContext(UserContext);
   const [messages, setMessages] = useState([]);
 
+  const [isTyping, setIsTyping] = useState(false);
+  const [whoIsTyping, setWhoIsTyping] = useState("");
+  const [isLoadImage, setIsLoadImage] = useState(false)
+
   const textareaRef = useRef("");
   const chatRef = useRef(null);
   const socketApi = useRef(null);
-  const emojiRef = useRef(null)
+  const emojiRef = useRef(null);
+  const inputFileRef = useRef(null);
 
   useEffect(() => {
     socketApi.current = io("");
@@ -28,17 +33,51 @@ export default function ChatsContainer() {
     socketApi.current.emit("getGeneralChat");
 
     socketApi.current.on("deleteGeneralMessage", (MessageId) => {
-      setMessages((prevMessages) => prevMessages.filter((message) => message.MessageId !== MessageId));
+      let messages = document.getElementById("messagesList").children;
+      Array.from(messages).forEach((element) => {
+        if (element.getAttribute("data-id") == MessageId) {
+          element.classList.add("deletingMessage");
+          setTimeout(() => {
+            setMessages((prevMessages) => prevMessages.filter((message) => message.MessageId !== MessageId));
+          }, 800);
+        }
+      });
+    });
+
+    socketApi.current.on("whoIsTyping", (UserName) => {
+      const listWritting = new Set(whoIsTyping);
+      listWritting.add(UserName);
+
+      const names = [...listWritting].join(", ");
+      let result = "";
+      if (listWritting.size > 2) {
+        result = `${names} и ещё ${listWritting.size} печатают...`;
+      } else if (listWritting.size == 2) {
+        result = `${names} печатают...`;
+      } else if (listWritting.size == 1) {
+        result = `${names} печатает...`;
+      } else {
+        result = "";
+      }
+      setWhoIsTyping(result);
+
+      if (result) {
+        setTimeout(() => {
+          setWhoIsTyping("");
+        }, 3000);
+      }
     });
 
     socketApi.current.on("loadGeneralMessage", (data) => {
       const date = new Date(data.MessageDate);
       const numberOfMonth = (date) => (date.getMonth() + 1 < 10 ? "0" + (date.getMonth() + 1) : date.getMonth() + 1);
       const numberOfDay = (date) => (date.getDate() < 10 ? "0" + date.getDate() : date.getDate());
+      const numberOfHour = (date) => (date.getHours() < 10 ? "0" + date.getHours() : date.getHours());
+      const numberOfMinute = (date) => (date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes());
       if (numberOfDay(date) == numberOfDay(new Date()) && numberOfMonth(date) == numberOfMonth(new Date())) {
-        data.MessageDate = `${date.getHours()}:${date.getMinutes()} `;
+        data.MessageDate = `${numberOfHour(date)}:${numberOfMinute(date)} `;
       } else {
-        data.MessageDate = `${numberOfDay(date)}.${numberOfMonth(date)} ${date.getHours()}:${date.getMinutes()} `;
+        data.MessageDate = `${numberOfDay(date)}.${numberOfMonth(date)} ${numberOfHour(date)}:${numberOfMinute(date)} `;
       }
       setMessages((prev) => [data, ...prev]);
     });
@@ -63,33 +102,105 @@ export default function ChatsContainer() {
     textarea.focus();
   };
 
-  const deleteMessage = (MessageId, MessageSenderLogin, MessageElement) => {
+  const deleteMessage = (MessageId, MessageSenderLogin, MessageImage, MessageElement) => {
     if (MessageSenderLogin == currentUser.UserLogin) {
-      MessageElement.classList.add("deletingMessage");
-      const MessageDeleted = { MessageId, MessageSenderLogin };
-      setTimeout(() => {
-        socketApi.current.emit("deleteGeneralMessage", MessageDeleted);
-      }, 600);
+      const MessageDeleted = { MessageId, MessageSenderLogin, MessageImage };
+      socketApi.current.emit("deleteGeneralMessage", MessageDeleted);
     }
   };
 
   const sendMessage = (textareaValue) => {
-    if (!textareaValue) return;
+    const imageFromInput = inputFileRef.current.files[0] ?? null;
+    if (!textareaValue && imageFromInput == null) return;
     const MessageContent = textareaValue;
     const MessageDate = new Date();
     const MessageSenderLogin = currentUser.UserLogin;
     const MessageSenderName = currentUser.UserName;
-    const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageDate };
-    console.log(chatRef);
+    let MessageImage = null;
 
-    // chatRef.current.scrollTo({ top: -50, behavior: "smooth" });
-    socketApi.current.emit("addGeneralMessage", messageInfo);
+    if (imageFromInput) {
+      (async () => {
+        MessageImage = await resizeImage(imageFromInput, 1600, 1200);
+        const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate };
+        socketApi.current.emit("addGeneralMessage", messageInfo);
+        setIsLoadImage(false)
+      })();
+    } else {
+      const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate };
+      socketApi.current.emit("addGeneralMessage", messageInfo);
+    }
+
+    chatRef.current.scrollTo(0, 0);
+    inputFileRef.current.value = "";
   };
+
+  async function resizeImage(imageFromInput, MAX_WIDTH, MAX_HEIGHT) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(imageFromInput);
+
+      reader.onload = async (e) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (BlobImage) => {
+              resolve(BlobImage);
+            },
+            "image/jpeg",
+            0.8
+          );
+        };
+      };
+    });
+  }
 
   const logout = () => {
     document.cookie = "ACCESS_TOKEN=";
     setCurrentUser({});
     navigate("/auth");
+  };
+
+  const sendIsTyping = () => {
+    // console.log("Typing", currentUser.UserName);
+    if (!isTyping) {
+      setIsTyping(true);
+      socketApi.current.emit("whoIsTyping", currentUser.UserName);
+      setTimeout(() => {
+        setIsTyping(false);
+        setWhoIsTyping("");
+      }, 3000);
+    }
+  };
+
+  // const sendFinishTyping = () => {
+  // socketApi.current.emit("whoIsTyping", currentUser.UserName);
+  // };
+
+  const sendVoiceMessage = () => {
+    console.log("Запись...");
   };
 
   return (
@@ -102,8 +213,14 @@ export default function ChatsContainer() {
       textareaRef={textareaRef}
       chatRef={chatRef}
       emojiRef={emojiRef}
+      inputFileRef={inputFileRef}
       addEmoji={addEmoji}
       emojiPack={emojiPack}
+      sendIsTyping={sendIsTyping}
+      whoIsTyping={whoIsTyping}
+      sendVoiceMessage={sendVoiceMessage}
+      isLoadImage={isLoadImage}
+      setIsLoadImage={setIsLoadImage}
     ></ChatsPresentation>
   );
 }

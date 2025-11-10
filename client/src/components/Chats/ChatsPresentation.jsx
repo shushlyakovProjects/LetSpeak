@@ -13,6 +13,12 @@ export default function ChatsPresentation({
   addEmoji,
   emojiPack,
   emojiRef,
+  sendIsTyping,
+  whoIsTyping,
+  sendVoiceMessage,
+  inputFileRef,
+  isLoadImage,
+  setIsLoadImage
 }) {
   return (
     <div className={style["wrapper"]}>
@@ -24,8 +30,8 @@ export default function ChatsPresentation({
         </nav>
       </header>
 
-      <ChatBlock currentUser={currentUser} chatRef={chatRef} messages={messages} deleteMessage={deleteMessage} />
-      <TextareaBlock sendMessage={sendMessage} textareaRef={textareaRef} addEmoji={addEmoji} emojiPack={emojiPack} emojiRef={emojiRef}
+      <ChatBlock  currentUser={currentUser} chatRef={chatRef} messages={messages} deleteMessage={deleteMessage} />
+      <TextareaBlock setIsLoadImage={setIsLoadImage} isLoadImage={isLoadImage} inputFileRef={inputFileRef} sendVoiceMessage={sendVoiceMessage} whoIsTyping={whoIsTyping} sendIsTyping={sendIsTyping} chatRef={chatRef} sendMessage={sendMessage} textareaRef={textareaRef} addEmoji={addEmoji} emojiPack={emojiPack} emojiRef={emojiRef}
       />
     </div>
   );

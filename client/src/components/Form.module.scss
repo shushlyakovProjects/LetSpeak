@@ -32,6 +32,11 @@
       font-size: 4rem;
       margin-bottom: 30px;
     }
+
+    @media (max-width: 350px) {
+      font-size: 15vw;
+      margin-bottom: 30px;
+    }
   }
 
   h2 {
