@@ -6,6 +6,7 @@ import { io } from "socket.io-client";
 import { useContext } from "react";
 import { UserContext } from "../../App";
 import { useState } from "react";
+import notificationSound from "../../assets/sounds/notification_sound.mp3";
 
 export default function ChatsContainer() {
   const emojiPack = {
@@ -15,11 +16,12 @@ export default function ChatsContainer() {
   };
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useContext(UserContext);
-  const [messages, setMessages] = useState([]);
 
+  const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [whoIsTyping, setWhoIsTyping] = useState("");
-  const [isLoadImage, setIsLoadImage] = useState(false)
+  const [isLoadImage, setIsLoadImage] = useState(false);
+  const [fileFromBuffer, setFileFromBuffer] = useState(null);
 
   const textareaRef = useRef("");
   const chatRef = useRef(null);
@@ -29,8 +31,20 @@ export default function ChatsContainer() {
 
   useEffect(() => {
     socketApi.current = io("");
-    socketApi.current.emit("connectToSocket", currentUser.UserLogin);
+    socketApi.current.emit("connectToSocket", { UserLogin: currentUser.UserLogin, UserName: currentUser.UserName });
     socketApi.current.emit("getGeneralChat");
+
+    socketApi.current.on("connectToSocket", (UserName) => {
+      const id = `notification_${Math.round(Math.random() * 1000)}`;
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<article id="${id}" class="notification">${UserName} <br /> присоединился</article>`
+      );
+
+      setTimeout(() => {
+        document.getElementById(id).remove();
+      }, 3000);
+    });
 
     socketApi.current.on("deleteGeneralMessage", (MessageId) => {
       let messages = document.getElementById("messagesList").children;
@@ -68,17 +82,23 @@ export default function ChatsContainer() {
       }
     });
 
-    socketApi.current.on("loadGeneralMessage", (data) => {
-      const date = new Date(data.MessageDate);
-      const numberOfMonth = (date) => (date.getMonth() + 1 < 10 ? "0" + (date.getMonth() + 1) : date.getMonth() + 1);
-      const numberOfDay = (date) => (date.getDate() < 10 ? "0" + date.getDate() : date.getDate());
-      const numberOfHour = (date) => (date.getHours() < 10 ? "0" + date.getHours() : date.getHours());
-      const numberOfMinute = (date) => (date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes());
-      if (numberOfDay(date) == numberOfDay(new Date()) && numberOfMonth(date) == numberOfMonth(new Date())) {
-        data.MessageDate = `${numberOfHour(date)}:${numberOfMinute(date)} `;
-      } else {
-        data.MessageDate = `${numberOfDay(date)}.${numberOfMonth(date)} ${numberOfHour(date)}:${numberOfMinute(date)} `;
+    socketApi.current.on("loadGeneralChat", (data) => {
+      data.MessageDate = formatDate(new Date(data.MessageDate));
+      setMessages((prev) => [data, ...prev]);
+    });
+
+    socketApi.current.on("loadGeneralMessage", async (data) => {
+      data.MessageDate = formatDate(new Date(data.MessageDate));
+
+      if (data.MessageSenderLogin != currentUser.UserLogin) {
+        const audio = new Audio();
+        audio.src = notificationSound;
+        try {
+          await audio.play();
+          navigator.vibrate(1000);
+        } catch (error) {}
       }
+
       setMessages((prev) => [data, ...prev]);
     });
 
@@ -87,6 +107,18 @@ export default function ChatsContainer() {
       socketApi.current.close();
     };
   }, []);
+
+  const formatDate = (date) => {
+    const numberOfMonth = (date) => (date.getMonth() + 1 < 10 ? "0" + (date.getMonth() + 1) : date.getMonth() + 1);
+    const numberOfDay = (date) => (date.getDate() < 10 ? "0" + date.getDate() : date.getDate());
+    const numberOfHour = (date) => (date.getHours() < 10 ? "0" + date.getHours() : date.getHours());
+    const numberOfMinute = (date) => (date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes());
+    if (numberOfDay(date) == numberOfDay(new Date()) && numberOfMonth(date) == numberOfMonth(new Date())) {
+      return `${numberOfHour(date)}:${numberOfMinute(date)} `;
+    } else {
+      return `${numberOfDay(date)}.${numberOfMonth(date)} ${numberOfHour(date)}:${numberOfMinute(date)} `;
+    }
+  };
 
   const addEmoji = (emoji) => {
     const textarea = textareaRef.current;
@@ -110,7 +142,7 @@ export default function ChatsContainer() {
   };
 
   const sendMessage = (textareaValue) => {
-    const imageFromInput = inputFileRef.current.files[0] ?? null;
+    const imageFromInput = (inputFileRef.current.files[0] || fileFromBuffer) ?? null;
     if (!textareaValue && imageFromInput == null) return;
     const MessageContent = textareaValue;
     const MessageDate = new Date();
@@ -123,7 +155,7 @@ export default function ChatsContainer() {
         MessageImage = await resizeImage(imageFromInput, 1600, 1200);
         const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate };
         socketApi.current.emit("addGeneralMessage", messageInfo);
-        setIsLoadImage(false)
+        setIsLoadImage(false);
       })();
     } else {
       const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate };
@@ -132,6 +164,7 @@ export default function ChatsContainer() {
 
     chatRef.current.scrollTo(0, 0);
     inputFileRef.current.value = "";
+    setFileFromBuffer(null);
   };
 
   async function resizeImage(imageFromInput, MAX_WIDTH, MAX_HEIGHT) {
@@ -221,6 +254,7 @@ export default function ChatsContainer() {
       sendVoiceMessage={sendVoiceMessage}
       isLoadImage={isLoadImage}
       setIsLoadImage={setIsLoadImage}
+      setFileFromBuffer={setFileFromBuffer}
     ></ChatsPresentation>
   );
 }

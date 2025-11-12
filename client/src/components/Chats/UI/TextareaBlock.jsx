@@ -14,6 +14,7 @@ export default function TextareaBlock({
   inputFileRef,
   isLoadImage,
   setIsLoadImage,
+  setFileFromBuffer,
 }) {
   return (
     <div
@@ -22,12 +23,33 @@ export default function TextareaBlock({
         emojiRef.current.style.display = "none";
       }}
     >
-      {whoIsTyping ? <p className={style["whoIsTyping"]}>{whoIsTyping}</p> : ""}
+      <div className={style["textarea__infobox"]}>
+        {whoIsTyping ? <p className={style["whoIsTyping"]}>{whoIsTyping}</p> : <p></p>}
+        {isLoadImage ? (
+          <p className={style["nameOfFile"]}>
+            {isLoadImage}
+          </p>
+        ) : (
+          ""
+        )}
+        {/* <p className={style["nameOfFile"]}>{isLoadImage ? `${isLoadImage.slice(0, 30)}${isLoadImage.length > 30 ? "..." : ''}` : ""}</p> */}
+      </div>
 
       <textarea
         className={style["textarea__field"]}
         ref={textareaRef}
         placeholder="Сообщение..."
+        onPaste={(e) => {
+          console.log(e);
+          console.log(e.clipboardData.types);
+          if (e.clipboardData && e.clipboardData.types.includes("Files")) {
+            const fileFromBuffer = e.clipboardData.files[0];
+            if (fileFromBuffer.type.startsWith("image/")) {
+              setFileFromBuffer(fileFromBuffer);
+              setIsLoadImage(fileFromBuffer.name);
+            }
+          }
+        }}
         onKeyDown={(e) => {
           sendIsTyping();
           if (e.code == "Enter") {
@@ -54,15 +76,20 @@ export default function TextareaBlock({
           className={style["textarea__button"]}
           title="Прикрепить файл"
           onClick={() => {
-            document.getElementById("textarea-inputFile").click();
+            if (isLoadImage) {
+              setFileFromBuffer(null);
+              setIsLoadImage(false);
+            } else {
+              document.getElementById("textarea-inputFile").click();
+            }
           }}
         >
-          {isLoadImage ? <div className="loader_1" title="Файл готов"></div> : "+"}
+          {isLoadImage ? <div className={style["textarea__fileStatus"]} title="Файл готов, отменить?"></div> : "+"}
         </button>
         <input
           onChange={(e) => {
             if (e.target.files.length) {
-              setIsLoadImage(true);
+              setIsLoadImage(e.target.files[0].name);
             } else {
               setIsLoadImage(false);
             }

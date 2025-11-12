@@ -5,19 +5,20 @@ module.exports = {
   socketHandler: (socket, io) => {
     console.log("New socket client!");
 
-    socket.on("connectToSocket", (login) => {
-      socket.UserLogin = login;
-      console.log(`Client with login ${login} has been connected to Socket!`);
+    socket.on("connectToSocket", ({ UserLogin, UserName }) => {
+      socket.UserLogin = UserLogin;
+      console.log(`Client with login ${UserLogin} has been connected to Socket!`);
+      socket.broadcast.emit("connectToSocket", UserName);
     });
 
     socket.on("getGeneralChat", () => {
       const selectQuery = "SELECT * FROM messages";
       connectionDB.query(selectQuery, (err, result) => {
         if (err) {
-          socket.emit("loadGeneralMessage", null);
+          socket.emit("loadGeneralChat", null);
         } else {
           result.forEach((message) => {
-            socket.emit("loadGeneralMessage", message);
+            socket.emit("loadGeneralChat", message);
           });
         }
       });
@@ -25,9 +26,7 @@ module.exports = {
 
     socket.on("deleteGeneralMessage", (MessageDeleted) => {
       const { MessageId, MessageSenderLogin, MessageImage } = MessageDeleted;
-
       const SQL_QUERY = `DELETE FROM messages WHERE MessageId = '${MessageId}' AND MessageSenderLogin = '${MessageSenderLogin}'`;
-      // УДАЛИТЬ ИЗОБРАЖЕНИЕ С ПАПКИ
       connectionDB.query(SQL_QUERY, (err, result) => {
         if (err) {
           console.log("Ошибка базы данных при удалении сообщения в общием чате");
@@ -40,7 +39,6 @@ module.exports = {
               console.log(error);
             }
           }
-
           console.log(`Сообщение ${MessageSenderLogin} ID:${MessageId} было удалено!`);
           io.emit("deleteGeneralMessage", MessageId);
         }
@@ -90,29 +88,6 @@ module.exports = {
       });
     });
 
-    // socket.on("addGeneralFile", ({blob, sender}) => {
-    //   // const { MessageSenderLogin, MessageSenderName, MessageContent, MessageDate } = data;
-
-    //   const fileName = `received_${sender}_${Date.now()}.png`;
-    //   const savePath = `./uploads/${fileName}`;
-
-    //   const SQL_QUERY = `INSERT INTO messages (MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate)
-    //   VALUE (null, '${MessageSenderLogin}', '${MessageSenderName}','${MessageContent}', '${}','${MessageDate}')`;
-
-    //   connectionDB.query(selectQuery, (err, result) => {
-    //     if (err) {
-    //       socket.emit("loadGeneralMessage", null);
-    //     } else {
-    //       result.forEach((message) => {
-    //         socket.emit("loadGeneralMessage", message);
-    //       });
-    //     }
-    //   });
-
-    //   // // Сохраняем файл на диске
-    //   // await fs.promises.writeFile(savePath, data);
-    //   // console.log(`File saved at ${savePath}`);
-    // });
 
     socket.on("whoIsTyping", (UserName) => {
       socket.broadcast.emit("whoIsTyping", UserName);

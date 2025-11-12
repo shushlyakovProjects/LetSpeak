@@ -1,7 +1,12 @@
 import React from "react";
 import style from "../Chats.module.scss";
+import ImageBlock from "./ImageBlock";
+import { useState } from "react";
 
 export default function ChatBlock({ currentUser, messages, deleteMessage, chatRef }) {
+  const [urlImage, setUrlImage] = useState('')
+  const urlServer = "http://localhost:3000/static/"
+
   return (
     <div className={style["chat"]} ref={chatRef} id="messagesList">
       {!messages.length
@@ -24,8 +29,9 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
               {message.MessageImage ? (
                 <img
                   className={style["chat__message-image"]}
-                  src={"http://localhost:3000/static/" + message.MessageImage}
+                  src={urlServer + message.MessageImage}
                   alt="Тут было изображение. Но оно в отпуске..."
+                  onClick={()=>{setUrlImage(urlServer + message.MessageImage)}}
                 />
               ) : (
                 ""
@@ -53,6 +59,9 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
               )}
             </div>
           ))}
+
+        {urlImage && <ImageBlock urlImage={urlImage} setUrlImage={setUrlImage}></ImageBlock>}
+      
     </div>
   );
 }

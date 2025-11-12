@@ -1,4 +1,5 @@
 @use "../../vars";
+@use "../../mixins";
 
 .wrapper {
   background-color: vars.$background_gray_color;
@@ -10,13 +11,13 @@
 
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 20px;
 
   @media (max-width: 500px) {
-    padding: 4vh 5vw;
+    padding: 3vh 5vw;
   }
   @media (max-width: 400px) {
-    padding: 4vh 2vw;
+    padding: 2vh 2vw;
   }
 
   nav {
@@ -42,7 +43,7 @@
 
     &__message {
       border-radius: 10px 10px 10px 0px;
-      border: 1px solid rgba(245, 245, 245, 0.2);
+      border: 1px solid rgba(245, 245, 245, 0.1);
       width: auto;
       max-width: 60%;
       min-width: 100px;
@@ -51,10 +52,10 @@
       white-space: pre-line;
       word-wrap: break-word;
       overflow-wrap: anywhere;
+      padding: 10px;
 
       @media (max-width: 500px) {
         max-width: 90%;
-        padding: 6px 30px 6px 10px;
         border: 1px solid rgba(245, 245, 245, 0.1);
       }
 
@@ -62,11 +63,9 @@
         color: vars.$accent_yellow_color;
         font-weight: bold;
         padding-bottom: 5px;
-        padding: 10px 30px 0px 10px;
       }
       &-content {
-        margin-bottom: 15px;
-        padding: 10px 30px 10px 10px;
+        margin-bottom: 10px;
       }
       &-date {
         position: absolute;
@@ -75,12 +74,12 @@
         font-size: 0.7rem;
         opacity: 0.4;
       }
-      &-image{
+      &-image {
+        margin-bottom: 10px;
         max-width: 100%;
-        // max-width: 400px;
-        aspect-ratio: 16/9;
-        object-fit: cover;
-        border-radius: 10px 10px 4px 4px;
+        max-height: 300px;
+        object-fit: contain;
+        border-radius: 10px;
         color: rgba(96, 96, 96, 0.4);
       }
       &-delete {
@@ -99,6 +98,7 @@
       text-align: left;
       align-self: end;
       border-radius: 10px 10px 0px 10px;
+      padding: 10px 25px 10px 10px;
     }
   }
 
@@ -108,7 +108,7 @@
 
     position: relative;
     display: flex;
-    transition-duration: 0.4s;
+    transition-duration: 0.2s;
     transition-timing-function: ease-in;
 
     &:has(textarea:focus) {
@@ -117,6 +117,7 @@
 
     .textarea__field {
       flex-grow: 1;
+      height: 3.6rem;
       color: vars.$text_white_color;
 
       &:focus ~ nav button {
@@ -124,15 +125,55 @@
       }
     }
 
-    .whoIsTyping{
+    &__infobox {
+      border-radius: 10px 10px 0 0;
+      height: auto;
+      width: 100%;
+      transform: translateY(-103%);
       position: absolute;
-      transform: translate(10px, -180%);
-      animation: whoIsTypingAnim 1s ease-in-out infinite alternate;
-    }
+      left: 0;
+      top: 0;
+      transition-duration: 0.5s;
 
-    @keyframes whoIsTypingAnim {
-      0%{letter-spacing: 0px;}
-      100%{letter-spacing: 1px;}
+      display: grid;
+      grid-template-columns: 1fr 30%;
+      justify-content: space-between;
+
+      @media (max-width: 500px) {
+        grid-template-columns: 1fr 50%;
+      }
+
+      .nameOfFile {
+        text-align: right;
+        @include mixins.cut-text;
+        animation: enterAnim 1s ease-in 1 forwards;
+
+        @keyframes enterAnim {
+          0% {
+            padding-right: 40%;
+          }
+          100% {
+            padding-right: 8px;
+          }
+        }
+      }
+
+      .whoIsTyping {
+        padding: 8px;
+        animation: whoIsTypingAnim 1s ease-in-out infinite alternate;
+        overflow: auto;
+
+        @include mixins.cut-text;
+
+        @keyframes whoIsTypingAnim {
+          0% {
+            letter-spacing: 0px;
+          }
+          100% {
+            letter-spacing: 1px;
+          }
+        }
+      }
     }
 
     &__nav {
@@ -198,6 +239,42 @@
 
       &:hover {
         opacity: 1 !important;
+      }
+    }
+
+    &__fileStatus {
+      &::after {
+        content: "✔";
+        color: greenyellow;
+      }
+      &:hover::after {
+        content: "Х";
+        color: red;
+      }
+    }
+  }
+
+  .imageWrapper {
+    position: fixed;
+    z-index: 100;
+    width: 100vw;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    backdrop-filter: blur(3px) brightness(0.8);
+
+    @include mixins.flex-center;
+
+    section {
+      width: 80vw;
+      height: 80vh;
+
+      @include mixins.flex-center;
+
+      img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
       }
     }
   }

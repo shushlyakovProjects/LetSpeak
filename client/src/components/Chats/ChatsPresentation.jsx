@@ -18,7 +18,8 @@ export default function ChatsPresentation({
   sendVoiceMessage,
   inputFileRef,
   isLoadImage,
-  setIsLoadImage
+  setIsLoadImage,
+  setFileFromBuffer,
 }) {
   return (
     <div className={style["wrapper"]}>
@@ -31,7 +32,7 @@ export default function ChatsPresentation({
       </header>
 
       <ChatBlock  currentUser={currentUser} chatRef={chatRef} messages={messages} deleteMessage={deleteMessage} />
-      <TextareaBlock setIsLoadImage={setIsLoadImage} isLoadImage={isLoadImage} inputFileRef={inputFileRef} sendVoiceMessage={sendVoiceMessage} whoIsTyping={whoIsTyping} sendIsTyping={sendIsTyping} chatRef={chatRef} sendMessage={sendMessage} textareaRef={textareaRef} addEmoji={addEmoji} emojiPack={emojiPack} emojiRef={emojiRef}
+      <TextareaBlock setFileFromBuffer={setFileFromBuffer} setIsLoadImage={setIsLoadImage} isLoadImage={isLoadImage} inputFileRef={inputFileRef} sendVoiceMessage={sendVoiceMessage} whoIsTyping={whoIsTyping} sendIsTyping={sendIsTyping} chatRef={chatRef} sendMessage={sendMessage} textareaRef={textareaRef} addEmoji={addEmoji} emojiPack={emojiPack} emojiRef={emojiRef}
       />
     </div>
   );

@@ -144,3 +144,24 @@ textarea:focus {
   70%{transform: scale(1.08);}
   80%{transform: scale(1.2);}
 }
+
+
+.notification{
+  position: fixed;
+  top: 20%;
+  left: 0;
+  padding: 8px;
+  background-color: vars.$background_gray_color;
+  box-shadow: 0 0 5px vars.$accent_yellow_color;
+  color: vars.$accent_yellow_color;
+  opacity: 0.6;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.8rem;
+  animation: notificationAnim 2.8s ease-in-out 1 forwards;
+}
+@keyframes notificationAnim {
+  0%{transform: translate(-100%, 0);}
+  20%{transform: translate(0%, 0);}
+  90%{transform: translate(0, 50%);opacity: 1;}
+  100%{transform: translate(-100%, 50%); opacity: 0;}
+}

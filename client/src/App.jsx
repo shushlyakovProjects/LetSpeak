@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 // import { useDispatch, useSelector } from "react-redux";
 import AuthorizationFormContainer from "./components/AuthorizationForm/AuthorizationFormContainer";
 import RegistrationFormContainer from "./components/RegistrationForm/RegistrationFormContainer";
@@ -15,7 +15,6 @@ export default function App() {
   // const dispathUser = useDispatch();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState("");
-  
 
   const tryLogin = () => {
     console.log("Checking authorization...");

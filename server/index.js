@@ -15,8 +15,8 @@ app.use(cookieParser());
 app.use('/static', express.static('uploads'))
 
 app.get("/*splat", (req, res) => {
-  res.send("<h1>Server is working...</h1>");
-  // res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+  // res.send("<h1>Server is working...</h1>");
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 
 const registrationController = require("./controllers/registrationController");
@@ -38,7 +38,7 @@ const IS_PRODACTION = false;
 
 if (IS_PRODACTION) {
   server.listen(process.env.SERVER_PORT, () => {
-    console.log(`Server with Socket.io have been started on ${process.env.SOCKET_PORT}`);
+    console.log(`Server with Socket.io have been started on ${process.env.SERVER_PORT}`);
   });
 } else {
   server.listen(process.env.SOCKET_PORT, () => {
