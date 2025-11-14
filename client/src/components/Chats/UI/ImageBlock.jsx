@@ -44,10 +44,11 @@ export default function ImageBlock({ urlImage, setUrlImage }) {
             let currentY = e.touches[0].clientY;
             let deltaY = startY - currentY;
 
-            e.target.style.cssText = `transform: translateY(${-deltaY}px)`;
-
-            if (Math.abs(deltaY) > 100) {
-              setUrlImage("");
+            if (deltaY > 0) {
+              e.target.style.cssText = `transform: translateY(${-deltaY}px)`;
+              if (Math.abs(deltaY) > 100) {
+                setUrlImage("");
+              }
             }
           }}
           onTouchEnd={(e) => {

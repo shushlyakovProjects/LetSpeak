@@ -14,6 +14,8 @@ export default function ChatsContainer() {
     Жесты: ["🤚", "👋", "👌", "🤌", "✌️", "💪"],
     Другое: ["❤️", "🤖", "🙈", "👀", "💩"],
   };
+  const urlServer = "http://192.168.0.10:3000/static/";
+
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useContext(UserContext);
 
@@ -22,6 +24,7 @@ export default function ChatsContainer() {
   const [whoIsTyping, setWhoIsTyping] = useState("");
   const [isLoadImage, setIsLoadImage] = useState(false);
   const [fileFromBuffer, setFileFromBuffer] = useState(null);
+  const [selectedMessage, setSelectedMessage] = useState(null);
 
   const textareaRef = useRef("");
   const chatRef = useRef(null);
@@ -143,28 +146,46 @@ export default function ChatsContainer() {
 
   const sendMessage = (textareaValue) => {
     const imageFromInput = (inputFileRef.current.files[0] || fileFromBuffer) ?? null;
-    if (!textareaValue && imageFromInput == null) return;
+    console.log(selectedMessage);
+
+    if (!textareaValue && !imageFromInput && !selectedMessage) return;
     const MessageContent = textareaValue;
     const MessageDate = new Date();
     const MessageSenderLogin = currentUser.UserLogin;
     const MessageSenderName = currentUser.UserName;
+    const MessageAnswerOn = selectedMessage ? selectedMessage.MessageId : null;
     let MessageImage = null;
 
     if (imageFromInput) {
       (async () => {
         MessageImage = await resizeImage(imageFromInput, 1600, 1200);
-        const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate };
+        const messageInfo = {
+          MessageSenderLogin,
+          MessageSenderName,
+          MessageContent,
+          MessageImage,
+          MessageDate,
+          MessageAnswerOn,
+        };
         socketApi.current.emit("addGeneralMessage", messageInfo);
         setIsLoadImage(false);
       })();
     } else {
-      const messageInfo = { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate };
+      const messageInfo = {
+        MessageSenderLogin,
+        MessageSenderName,
+        MessageContent,
+        MessageImage,
+        MessageDate,
+        MessageAnswerOn,
+      };
       socketApi.current.emit("addGeneralMessage", messageInfo);
     }
 
     chatRef.current.scrollTo(0, 0);
     inputFileRef.current.value = "";
     setFileFromBuffer(null);
+    setSelectedMessage(null);
   };
 
   async function resizeImage(imageFromInput, MAX_WIDTH, MAX_HEIGHT) {
@@ -238,6 +259,7 @@ export default function ChatsContainer() {
 
   return (
     <ChatsPresentation
+      urlServer={urlServer}
       logout={logout}
       sendMessage={sendMessage}
       messages={messages}
@@ -255,6 +277,8 @@ export default function ChatsContainer() {
       isLoadImage={isLoadImage}
       setIsLoadImage={setIsLoadImage}
       setFileFromBuffer={setFileFromBuffer}
+      selectedMessage={selectedMessage}
+      setSelectedMessage={setSelectedMessage}
     ></ChatsPresentation>
   );
 }

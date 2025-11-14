@@ -3,9 +3,10 @@ const fs = require("fs");
 
 module.exports = {
   socketHandler: (socket, io) => {
-    console.log("New socket client!");
+    console.log("New connection on socket!");
 
     socket.on("connectToSocket", ({ UserLogin, UserName }) => {
+      if(!UserLogin || !UserName) return;
       socket.UserLogin = UserLogin;
       console.log(`Client with login ${UserLogin} has been connected to Socket!`);
       socket.broadcast.emit("connectToSocket", UserName);
@@ -46,7 +47,7 @@ module.exports = {
     });
 
     socket.on("addGeneralMessage", (data) => {
-      const { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate } = data;
+      const { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate, MessageAnswerOn } = data;
 
       console.log("Новое сообщение");
 
@@ -68,8 +69,8 @@ module.exports = {
           });
       }
 
-      const SQL_QUERY = `INSERT INTO messages (MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate) 
-      VALUE (null, '${MessageSenderLogin}', '${MessageSenderName}','${MessageContent}', '${fileName}','${MessageDate}')`;
+      const SQL_QUERY = `INSERT INTO messages (MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate, MessageAnswerOn) 
+      VALUE (null, '${MessageSenderLogin}', '${MessageSenderName}','${MessageContent}', '${fileName}','${MessageDate}', '${MessageAnswerOn}')`;
 
       connectionDB.query(SQL_QUERY, (err, result) => {
         if (err) {
@@ -83,6 +84,7 @@ module.exports = {
             MessageContent,
             MessageImage: fileName,
             MessageDate,
+            MessageAnswerOn,
           });
         }
       });
