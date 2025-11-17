@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" xmlns:bx="https://boxy-svg.com">
+
+  <style>
+    svg:hover rect,
+    svg:hover path,
+    svg:hover line {
+      stroke: yellow !important;
+    }
+  </style>
+
+
+  <rect fill="none" stroke="rgb(182, 183, 179)" style="stroke-width: 2px;" x="18.729" y="3.817" width="13.323"
+    height="30.068" rx="6.323" ry="6.323" />
+  <path
+    d="M 35.039 21.7 L 35.039 30.462 C 35.039 34.141 32.431 37.124 28.378 37.124 L 22.393 37.124 C 18.714 37.124 15.732 34.141 15.732 30.462 L 15.732 21.7"
+    style="stroke-miterlimit: 4.53; stroke-linejoin: round; stroke-dashoffset: -4px; paint-order: fill; fill: none; stroke-width: 2px; stroke-linecap: round; stroke: rgb(182, 183, 179); transform-origin: 25.422px 25.554px;" />
+  <line
+    style="fill: rgb(216, 216, 216); stroke-width: 2px; stroke: rgb(182, 183, 179); transform-origin: 25.422px 25.554px;"
+    x1="25.374" y1="37.248" x2="25.39" y2="47.1" />
+  <line
+    style="fill: rgb(216, 216, 216); stroke-width: 2px; stroke: rgb(182, 183, 179); transform-origin: 25.422px 25.554px;"
+    x1="15.426" y1="47.195" x2="35.416" y2="47.29" />
+</svg>

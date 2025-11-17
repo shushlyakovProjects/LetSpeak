@@ -99,7 +99,7 @@ export default function ChatsContainer() {
         try {
           await audio.play();
           navigator.vibrate(1000);
-        } catch (error) {}
+        } catch (error) {console.log(error)}
       }
 
       setMessages((prev) => [data, ...prev]);

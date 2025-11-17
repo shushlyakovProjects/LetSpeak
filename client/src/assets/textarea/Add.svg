@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" style="" xmlns:bx="https://boxy-svg.com">
+<style>
+    svg:hover rect,
+    svg:hover path,
+    svg:hover line {
+      stroke: yellow !important;
+    }
+  </style>
+  <defs>
+    <bx:grid x="0" y="0" width="6.323" height="6.323"/>
+  </defs>
+  <path d="M 20.973 4.868 H 29.025 V 20.973 H 45.131 V 29.025 H 29.025 V 45.131 H 20.973 V 29.025 H 4.868 V 20.973 H 20.973 Z" bx:shape="cross 4.868 4.868 40.263 40.263 8.052 8.052 0.5 1@42feb468" style="stroke-width: 2px; stroke: rgb(182, 183, 179); stroke-linejoin: round; fill: none;"/>
+</svg>

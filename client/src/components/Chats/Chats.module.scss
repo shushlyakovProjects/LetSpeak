@@ -51,7 +51,7 @@
       white-space: pre-line;
       word-wrap: break-word;
       overflow-wrap: anywhere;
-      padding: 10px 25px 20px 10px;
+      padding: 10px 10px 20px 10px;
 
       transition-property: box-shadow;
       transition-duration: 0.5s;
@@ -300,11 +300,12 @@
     }
 
     &__nav {
+      padding: 0 5px;
       display: flex;
       flex-direction: row;
       align-items: center;
+      gap: 2px;
       height: 100%;
-      padding: 0px 5px;
       position: relative;
 
       &_emoji {
@@ -354,15 +355,15 @@
     }
 
     &__button {
+      padding: 0;
       font-size: 2rem;
       opacity: 0.3;
-      width: 35px;
-
       transition-duration: 0.4s;
-      height: 100%;
-
+      width: 35px;
+      height: 35px;
+      
       &:hover {
-        opacity: 1 !important;
+         opacity: 1 !important;
       }
     }
 

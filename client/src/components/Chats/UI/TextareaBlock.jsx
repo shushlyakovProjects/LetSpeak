@@ -1,6 +1,11 @@
 import React from "react";
 import style from "../Chats.module.scss";
 
+import EmojiIcon from "../../../assets/textarea/Emoji.svg";
+import SendIcon from "../../../assets/textarea/Send.svg";
+import AddIcon from "../../../assets/textarea/Add.svg";
+import MicrophoneIcon from "../../../assets/textarea/Microphone.svg";
+
 export default function TextareaBlock({
   urlServer,
   whoIsTyping,
@@ -87,14 +92,13 @@ export default function TextareaBlock({
         ></textarea>
         <nav className={style["textarea__nav"]}>
           <button
-            style={{ transform: "scale(0.8)", paddingBottom: "6px", width: "34px" }}
             className={style["textarea__button"]}
             title="Голосовое сообщение"
             onClick={() => {
               sendVoiceMessage();
             }}
           >
-            🎙️
+            <object type="image/svg+xml" data={MicrophoneIcon} id="MicrophoneIcon"></object>
           </button>
           <button
             className={style["textarea__button"]}
@@ -108,7 +112,11 @@ export default function TextareaBlock({
               }
             }}
           >
-            {isLoadImage ? <div className={style["textarea__fileStatus"]} title="Файл готов, отменить?"></div> : "+"}
+            {isLoadImage ? (
+              <div className={style["textarea__fileStatus"]} title="Файл готов, отменить?"></div>
+            ) : (
+              <object type="image/svg+xml" data={AddIcon} id="AddIcon"></object>
+            )}
           </button>
           <input
             onChange={(e) => {
@@ -132,7 +140,7 @@ export default function TextareaBlock({
               emojiRef.current.style.display = "block";
             }}
           >
-            ☺
+            <object type="image/svg+xml" data={EmojiIcon} id="EmojiIcon"></object>
           </button>
           <div
             className={style["textarea__nav_emoji"]}
@@ -170,11 +178,9 @@ export default function TextareaBlock({
             title="Отправить"
             onClick={() => {
               sendMessage(textareaRef.current.value);
-              textareaRef.current.value = "";
-              chatRef.current.scrollTo(0, 0);
             }}
           >
-            ▷
+            <object type="image/svg+xml" data={SendIcon} id="SendIcon"></object>
           </button>
         </nav>
       </section>
