@@ -295,7 +295,7 @@
       flex-grow: 1;
       color: vars.$text_white_color;
       &:focus ~ nav button {
-        opacity: 0.7;
+        opacity: 0.5;
       }
     }
 
@@ -361,9 +361,11 @@
       transition-duration: 0.4s;
       width: 35px;
       height: 35px;
+      filter: grayscale(1);
       
       &:hover {
          opacity: 1 !important;
+         filter: grayscale(0);
       }
     }
 

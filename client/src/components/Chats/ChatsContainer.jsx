@@ -14,7 +14,7 @@ export default function ChatsContainer() {
     Жесты: ["🤚", "👋", "👌", "🤌", "✌️", "💪"],
     Другое: ["❤️", "🤖", "🙈", "👀", "💩"],
   };
-  const urlServer = "http://192.168.0.10:3000/static/";
+  const urlServer = "http://localhost:3000/static/";
 
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useContext(UserContext);
@@ -184,6 +184,7 @@ export default function ChatsContainer() {
 
     chatRef.current.scrollTo(0, 0);
     inputFileRef.current.value = "";
+    textareaRef.current.value = "";
     setFileFromBuffer(null);
     setSelectedMessage(null);
   };

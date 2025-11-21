@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" style="" xmlns:bx="https://boxy-svg.com">
-  <style>
-    svg:hover ellipse,
-    svg:hover path,
-    svg:hover line {
-      stroke: yellow !important;
-    }
-  </style>
-
-  <defs>
+  <!-- <defs>
     <bx:grid x="0" y="0" width="6.323" height="6.323" />
     <bx:export>
       <bx:file format="svg" href="#object-0" />
@@ -16,13 +8,13 @@
       <bx:file format="svg" href="#object-2" path="Untitled 3.svg" />
       <bx:file format="svg" href="#object-3" path="Untitled 4.svg" />
     </bx:export>
-  </defs>
-  <ellipse style="fill-rule: nonzero; fill: none; stroke-width: 2px; stroke: rgb(182, 183, 179); stroke-linecap: round;"
+  </defs> -->
+  <ellipse style="fill-rule: nonzero; fill: none; stroke-width: 2px; stroke: yellow; stroke-linecap: round;"
     cx="25" cy="25" rx="20.392" ry="20.392" id="object-0" />
-  <ellipse style="stroke-width: 2px; fill: rgb(182, 183, 179); stroke-linecap: round;" cx="18.316" cy="19.006" rx="2.58"
+  <ellipse style="stroke-width: 2px; fill: yellow; stroke-linecap: round;" cx="18.316" cy="19.006" rx="2.58"
     ry="2.58" id="object-1" />
-  <ellipse style="stroke-width: 2px; paint-order: fill; fill: rgb(182, 183, 179); stroke-linecap: round;" cx="31.917"
+  <ellipse style="stroke-width: 2px; paint-order: fill; fill: yellow; stroke-linecap: round;" cx="31.917"
     cy="18.919" rx="2.58" ry="2.58" id="object-2" />
-  <path style="fill: none; stroke-width: 2px; stroke: rgb(182, 183, 179); stroke-linecap: round;"
+  <path style="fill: none; stroke-width: 2px; stroke: yellow; stroke-linecap: round;"
     d="M 17.107 31.615 C 18.774 37.385 31.822 37.023 33.823 31.615" id="object-3" />
 </svg>

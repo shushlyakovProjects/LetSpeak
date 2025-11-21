@@ -38,7 +38,7 @@ export default function TextareaBlock({
               <h3>Ответ для {selectedMessage.MessageSenderName}</h3>
               {selectedMessage.MessageContent ? (
                 <p>
-                  <span>></span> {selectedMessage.MessageContent}
+                  <span>{">"}</span> {selectedMessage.MessageContent}
                 </p>
               ) : (
                 ""
@@ -69,8 +69,6 @@ export default function TextareaBlock({
           ref={textareaRef}
           placeholder="Сообщение..."
           onPaste={(e) => {
-            console.log(e);
-            console.log(e.clipboardData.types);
             if (e.clipboardData && e.clipboardData.types.includes("Files")) {
               const fileFromBuffer = e.clipboardData.files[0];
               if (fileFromBuffer.type.startsWith("image/")) {
@@ -98,7 +96,7 @@ export default function TextareaBlock({
               sendVoiceMessage();
             }}
           >
-            <object type="image/svg+xml" data={MicrophoneIcon} id="MicrophoneIcon"></object>
+            <img src={MicrophoneIcon} alt="" />
           </button>
           <button
             className={style["textarea__button"]}
@@ -115,7 +113,7 @@ export default function TextareaBlock({
             {isLoadImage ? (
               <div className={style["textarea__fileStatus"]} title="Файл готов, отменить?"></div>
             ) : (
-              <object type="image/svg+xml" data={AddIcon} id="AddIcon"></object>
+              <img src={AddIcon} alt="" />
             )}
           </button>
           <input
@@ -140,7 +138,7 @@ export default function TextareaBlock({
               emojiRef.current.style.display = "block";
             }}
           >
-            <object type="image/svg+xml" data={EmojiIcon} id="EmojiIcon"></object>
+            <img src={EmojiIcon} alt="" />
           </button>
           <div
             className={style["textarea__nav_emoji"]}
@@ -180,7 +178,7 @@ export default function TextareaBlock({
               sendMessage(textareaRef.current.value);
             }}
           >
-            <object type="image/svg+xml" data={SendIcon} id="SendIcon"></object>
+            <img src={SendIcon} alt="" />
           </button>
         </nav>
       </section>
