@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" xmlns:bx="https://boxy-svg.com">
+  <path d="M -26.906 -42.636 Q -25 -46.448 -23.095 -42.636 L -6.412 -9.27 Q -4.506 -5.458 -8.318 -5.458 L -41.683 -5.458 Q -45.495 -5.458 -43.589 -9.27 Z" bx:shape="triangle -45.495 -46.448 40.989 40.99 0.5 0.093 1@1a0d59b2" style="stroke: rgb(255, 255, 0); stroke-width: 2px; fill: none; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(-1, 0, 0, -1, 50.000996, 50)"/>
+</svg>

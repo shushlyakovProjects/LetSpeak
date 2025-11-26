@@ -24,14 +24,14 @@ export default function ImageBlock({ urlImage, setUrlImage }) {
 
   return (
     <div
-      className={style["imageWrapper"]}
+      className={style["image_showbox"]}
       onClick={(e) => {
         if (!e.target.closest("img")) {
           setUrlImage("");
         }
       }}
     >
-      <section className="zoom">
+      <section>
         <img
           src={urlImage}
           alt="Тут было изображение. Серьезно."

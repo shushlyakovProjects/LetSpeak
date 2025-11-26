@@ -31,6 +31,30 @@ export default function App() {
       });
   };
 
+  const createNotification = (type, object) => {
+    const id = `notification_${Math.round(Math.random() * 1000)}`;
+    let notificationContent = ``;
+
+    switch (type) {
+      case "newClient":
+        notificationContent = `${object.UserName} <br /> присоединился`;
+        break;
+      case "permissionDenied":
+        notificationContent = `Отказано в доступе :(`;
+        break;
+      default:
+        break;
+    }
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<article id="${id}" class="notification">${notificationContent}`
+    );
+
+    setTimeout(() => {
+      document.getElementById(id).remove();
+    }, 3000);
+  };
+
   useEffect(() => {
     navigate("/auth");
     tryLogin();
@@ -42,8 +66,8 @@ export default function App() {
         <Routes>
           <Route path="/reg" element={<RegistrationFormContainer />} />
           <Route path="/auth" element={<AuthorizationFormContainer />} />
-          <Route path="/chats" element={<ChatsContainer />} />
-          <Route path="/" element={<ChatsContainer />} />
+          <Route path="/chats" element={<ChatsContainer createNotification={createNotification} />} />
+          <Route path="/" element={<ChatsContainer createNotification={createNotification} />} />
         </Routes>
       </UserContext>
     </>

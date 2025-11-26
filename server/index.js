@@ -12,7 +12,9 @@ const app = express();
 app.use(express.static(path.join(__dirname, "../client/dist")));
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use('/static', express.static('uploads'))
+app.use("/static", express.static("uploads"));
+app.use("/static", express.static("uploads/images"));
+app.use("/static", express.static("uploads/voices"));
 
 app.get("/*splat", (req, res) => {
   // res.send("<h1>Server is working...</h1>");
@@ -25,22 +27,54 @@ app.use("/api/registration", registrationController);
 const authorizationController = require("./controllers/authorizationController");
 app.use("/api/authorization", authorizationController);
 
-const http = require("http");
-const socketIo = require("socket.io");
 const { socketHandler } = require("./controllers/socketController");
-const server = http.createServer(app);
-const io = socketIo(server);
-io.on("connect", (socket) => {
-  socketHandler(socket, io);
-});
+const socketIo = require("socket.io");
+
+
+
+//  ========= Server Mode ==========
 
 const IS_PRODACTION = false;
 
-if (IS_PRODACTION) {
+//  ========= Server Mode ==========
+
+
+
+
+IS_PRODACTION ? startProdaction() : startDevlopment();
+
+function startProdaction() {
+  console.log("--- Server mode: prodaction ---");
+
+  const fs = require("fs");
+  const options = {
+    key: fs.readFileSync("./https/key.pem"),
+    cert: fs.readFileSync("./https/cert.pem"),
+  };
+  const https = require("https");
+  const server = https.createServer(options, app);
+  const io = socketIo(server);
+
+  io.on("connect", (socket) => {
+    socketHandler(socket, io);
+  });
+
   server.listen(process.env.SERVER_PORT, () => {
     console.log(`Server with Socket.io have been started on ${process.env.SERVER_PORT}`);
   });
-} else {
+}
+
+function startDevlopment() {
+  console.log("--- Server mode: development ---");
+
+  const http = require("http");
+
+  const server = http.createServer(app);
+  const io = socketIo(server);
+  io.on("connect", (socket) => {
+    socketHandler(socket, io);
+  });
+
   server.listen(process.env.SOCKET_PORT, () => {
     console.log(`Socket.io has been started on ${process.env.SOCKET_PORT}`);
   });

@@ -6,7 +6,7 @@ module.exports = {
     console.log("New connection on socket!");
 
     socket.on("connectToSocket", ({ UserLogin, UserName }) => {
-      if(!UserLogin || !UserName) return;
+      if (!UserLogin || !UserName) return;
       socket.UserLogin = UserLogin;
       console.log(`Client with login ${UserLogin} has been connected to Socket!`);
       socket.broadcast.emit("connectToSocket", UserName);
@@ -26,7 +26,7 @@ module.exports = {
     });
 
     socket.on("deleteGeneralMessage", (MessageDeleted) => {
-      const { MessageId, MessageSenderLogin, MessageImage } = MessageDeleted;
+      const { MessageId, MessageSenderLogin, MessageImage, MessageVoiceContent } = MessageDeleted;
       const SQL_QUERY = `DELETE FROM messages WHERE MessageId = '${MessageId}' AND MessageSenderLogin = '${MessageSenderLogin}'`;
       connectionDB.query(SQL_QUERY, (err, result) => {
         if (err) {
@@ -34,8 +34,16 @@ module.exports = {
         } else {
           if (MessageImage) {
             try {
-              const imagePath = `./uploads/${MessageImage}`;
+              const imagePath = `./uploads/images/${MessageImage}`;
               fs.unlinkSync(imagePath);
+            } catch (error) {
+              console.log(error);
+            }
+          }
+          if (MessageVoiceContent) {
+            try {
+              const voicePath = `./uploads/voices/${MessageVoiceContent}`;
+              fs.unlinkSync(voicePath);
             } catch (error) {
               console.log(error);
             }
@@ -47,30 +55,56 @@ module.exports = {
     });
 
     socket.on("addGeneralMessage", (data) => {
-      const { MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate, MessageAnswerOn } = data;
+      const {
+        MessageSenderLogin,
+        MessageSenderName,
+        MessageContent,
+        MessageImage,
+        MessageDate,
+        MessageAnswerOn,
+        MessageVoiceContent,
+      } = data;
 
       console.log("Новое сообщение");
 
-      let blobImage = null;
-      let fileName = "";
+      let blobVoice = null;
+      let fileNameVoice = "";
 
-      if (MessageImage) {
-        blobImage = MessageImage;
-        fileName = `received_${MessageSenderLogin}_${Date.now()}.png`;
-        const savePath = `./uploads/${fileName}`;
+      if (MessageVoiceContent) {
+        blobVoice = MessageVoiceContent;
+        fileNameVoice = `received_${MessageSenderLogin}_${Date.now()}.webm`;
+        const savePath = `./uploads/voices/${fileNameVoice}`;
 
         fs.promises
-          .writeFile(savePath, blobImage)
+          .writeFile(savePath, blobVoice)
           .then((result) => {
-            console.log("Загружен новый файл!");
+            console.log("Загружена новая голосовая запись!");
           })
           .catch((error) => {
             console.log("Ошибка при загрузке файла!");
           });
       }
 
-      const SQL_QUERY = `INSERT INTO messages (MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageDate, MessageAnswerOn) 
-      VALUE (null, '${MessageSenderLogin}', '${MessageSenderName}','${MessageContent}', '${fileName}','${MessageDate}', '${MessageAnswerOn}')`;
+      let blobImage = null;
+      let fileNameImage = "";
+
+      if (MessageImage) {
+        blobImage = MessageImage;
+        fileNameImage = `received_${MessageSenderLogin}_${Date.now()}.png`;
+        const savePath = `./uploads/images/${fileNameImage}`;
+
+        fs.promises
+          .writeFile(savePath, blobImage)
+          .then((result) => {
+            console.log("Загружено новое изображение!");
+          })
+          .catch((error) => {
+            console.log("Ошибка при загрузке файла!");
+          });
+      }
+
+      const SQL_QUERY = `INSERT INTO messages (MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageVoiceContent, MessageDate, MessageAnswerOn) 
+      VALUE (null, '${MessageSenderLogin}', '${MessageSenderName}','${MessageContent}', '${fileNameImage}', '${fileNameVoice}','${MessageDate}', '${MessageAnswerOn}')`;
 
       connectionDB.query(SQL_QUERY, (err, result) => {
         if (err) {
@@ -82,14 +116,14 @@ module.exports = {
             MessageSenderLogin,
             MessageSenderName,
             MessageContent,
-            MessageImage: fileName,
+            MessageImage: fileNameImage,
+            MessageVoiceContent: fileNameVoice,
             MessageDate,
             MessageAnswerOn,
           });
         }
       });
     });
-
 
     socket.on("whoIsTyping", (UserName) => {
       socket.broadcast.emit("whoIsTyping", UserName);

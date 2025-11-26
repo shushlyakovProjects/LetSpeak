@@ -1,0 +1,38 @@
+.voice_message {
+  display: grid;
+  gap: 5px;
+  grid-template:
+    [start] "playpause duration" auto [r2]
+    [r2] "track track" auto [end]
+    / 40px 1fr;
+
+  &__play {
+    grid-area: playpause;
+    justify-self: start;
+  }
+
+  &__pause {
+    grid-area: playpause;
+    justify-self: start;
+  }
+
+  &__duration {
+    grid-area: duration;
+    font-size: 0.7rem;
+    justify-self: end;
+    padding-right: 2.5px;
+  }
+
+  &__track {
+    grid-area: track;
+    accent-color: vars.$accent_yellow_color;
+  }
+
+  button {
+    padding: 0;
+    img {
+      width: 28px;
+      height: 28px;
+    }
+  }
+}

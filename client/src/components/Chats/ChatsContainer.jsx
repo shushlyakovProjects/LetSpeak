@@ -8,12 +8,13 @@ import { UserContext } from "../../App";
 import { useState } from "react";
 import notificationSound from "../../assets/sounds/notification_sound.mp3";
 
-export default function ChatsContainer() {
+export default function ChatsContainer({ createNotification }) {
   const emojiPack = {
     Эмоции: ["🤪", "😂", "🤗", "😁", "🫠", "😨", "😏"],
     Жесты: ["🤚", "👋", "👌", "🤌", "✌️", "💪"],
     Другое: ["❤️", "🤖", "🙈", "👀", "💩"],
   };
+  // const urlServer = "https://5.138.95.76:3000/static/";
   const urlServer = "http://localhost:3000/static/";
 
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function ChatsContainer() {
   const socketApi = useRef(null);
   const emojiRef = useRef(null);
   const inputFileRef = useRef(null);
+  const buttonVoiceMessageRef = useRef(null);
 
   useEffect(() => {
     socketApi.current = io("");
@@ -38,15 +40,7 @@ export default function ChatsContainer() {
     socketApi.current.emit("getGeneralChat");
 
     socketApi.current.on("connectToSocket", (UserName) => {
-      const id = `notification_${Math.round(Math.random() * 1000)}`;
-      document.body.insertAdjacentHTML(
-        "beforeend",
-        `<article id="${id}" class="notification">${UserName} <br /> присоединился</article>`
-      );
-
-      setTimeout(() => {
-        document.getElementById(id).remove();
-      }, 3000);
+      createNotification("newClient", { UserName });
     });
 
     socketApi.current.on("deleteGeneralMessage", (MessageId) => {
@@ -99,7 +93,9 @@ export default function ChatsContainer() {
         try {
           await audio.play();
           navigator.vibrate(1000);
-        } catch (error) {console.log(error)}
+        } catch (error) {
+          console.log(error);
+        }
       }
 
       setMessages((prev) => [data, ...prev]);
@@ -137,24 +133,28 @@ export default function ChatsContainer() {
     textarea.focus();
   };
 
-  const deleteMessage = (MessageId, MessageSenderLogin, MessageImage, MessageElement) => {
+  const deleteMessage = (MessageId, MessageSenderLogin, MessageImage, MessageVoiceContent) => {
     if (MessageSenderLogin == currentUser.UserLogin) {
-      const MessageDeleted = { MessageId, MessageSenderLogin, MessageImage };
+      const MessageDeleted = { MessageId, MessageSenderLogin, MessageImage, MessageVoiceContent };
       socketApi.current.emit("deleteGeneralMessage", MessageDeleted);
     }
   };
 
-  const sendMessage = (textareaValue) => {
+  const sendMessage = (textareaValue, voiceRecord) => {
     const imageFromInput = (inputFileRef.current.files[0] || fileFromBuffer) ?? null;
-    console.log(selectedMessage);
+    let MessageContent = textareaRef.current.value;
 
-    if (!textareaValue && !imageFromInput && !selectedMessage) return;
-    const MessageContent = textareaValue;
+    if (!MessageContent && !imageFromInput && !selectedMessage && !voiceRecord) return;
     const MessageDate = new Date();
     const MessageSenderLogin = currentUser.UserLogin;
     const MessageSenderName = currentUser.UserName;
     const MessageAnswerOn = selectedMessage ? selectedMessage.MessageId : null;
+    const MessageVoiceContent = voiceRecord || null;
     let MessageImage = null;
+
+    if (MessageVoiceContent) {
+      MessageContent = "";
+    }
 
     if (imageFromInput) {
       (async () => {
@@ -166,6 +166,7 @@ export default function ChatsContainer() {
           MessageImage,
           MessageDate,
           MessageAnswerOn,
+          MessageVoiceContent,
         };
         socketApi.current.emit("addGeneralMessage", messageInfo);
         setIsLoadImage(false);
@@ -178,6 +179,7 @@ export default function ChatsContainer() {
         MessageImage,
         MessageDate,
         MessageAnswerOn,
+        MessageVoiceContent,
       };
       socketApi.current.emit("addGeneralMessage", messageInfo);
     }
@@ -254,8 +256,56 @@ export default function ChatsContainer() {
   // socketApi.current.emit("whoIsTyping", currentUser.UserName);
   // };
 
-  const sendVoiceMessage = () => {
-    console.log("Запись...");
+  const mediaStream = useRef(null);
+  const chunks = useRef([]);
+  const [isRecordingVoiceMessage, setIsRecordingVoiceMessage] = useState(false);
+  const isRecordingVMCancelled = useRef(false);
+
+  const recordingVoiceMessage = async () => {
+    if (!isRecordingVoiceMessage) {
+      try {
+        mediaStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(mediaStream.current);
+
+        recorder.ondataavailable = (e) => {
+          // Опасное место, в дальнейшем лучше придумать способ фильтрации записей менее 1сек
+          if (e.data.size > 20000) {
+            console.log(e.data.size);
+            
+            chunks.current.push(e.data);
+
+            if (isRecordingVMCancelled.current) {
+              chunks.current = [];
+            } else {
+              if (!isRecordingVoiceMessage) {
+                const blob = new Blob(chunks.current, { type: "audio/webm" });
+                sendMessage("", blob);
+                buttonVoiceMessageRef.current.classList.remove("loader_1");
+                chunks.current = [];
+              }
+            }
+          }
+        };
+        recorder.start();
+        setIsRecordingVoiceMessage(true);
+      } catch (error) {
+        console.log(error);
+        buttonVoiceMessageRef.current.classList.remove("loader_1");
+        createNotification("permissionDenied");
+      }
+    } else {
+      // Остановка записи
+      isRecordingVMCancelled.current = true;
+      mediaStream.current?.getTracks().forEach((track) => track.stop());
+      setIsRecordingVoiceMessage(false);
+    }
+  };
+
+  const sendRecordingVoiceMessage = async () => {
+    // Отправка записи
+    isRecordingVMCancelled.current = false;
+    mediaStream.current?.getTracks().forEach((track) => track.stop());
+    setIsRecordingVoiceMessage(false);
   };
 
   return (
@@ -274,12 +324,15 @@ export default function ChatsContainer() {
       emojiPack={emojiPack}
       sendIsTyping={sendIsTyping}
       whoIsTyping={whoIsTyping}
-      sendVoiceMessage={sendVoiceMessage}
       isLoadImage={isLoadImage}
       setIsLoadImage={setIsLoadImage}
       setFileFromBuffer={setFileFromBuffer}
       selectedMessage={selectedMessage}
       setSelectedMessage={setSelectedMessage}
+      recordingVoiceMessage={recordingVoiceMessage}
+      buttonVoiceMessageRef={buttonVoiceMessageRef}
+      isRecordingVoiceMessage={isRecordingVoiceMessage}
+      sendRecordingVoiceMessage={sendRecordingVoiceMessage}
     ></ChatsPresentation>
   );
 }

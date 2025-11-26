@@ -1,11 +1,27 @@
 import style from "../Chats.module.scss";
 import ImageBlock from "./ImageBlock";
-import { useState } from "react";
+import { useState, memo, useEffect } from "react";
+import MessageVoice from "./MessageVoice";
+
+import ToDownIcon from "../../../assets/icons/ToDown.svg";
+
+const MemoMessageVoice = memo(MessageVoice);
 
 export default function ChatBlock({ currentUser, messages, deleteMessage, chatRef, setSelectedMessage, urlServer }) {
   const [urlImage, setUrlImage] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [startCord, setStartCord] = useState({});
+  const [elevatorIsShow, setElevatorIsShow] = useState(false);
+
+  useEffect(() => {
+    document.getElementById("messagesList").addEventListener("scroll", () => {
+      if (document.getElementById("messagesList").scrollTop < -200 && !elevatorIsShow) {
+        setElevatorIsShow(true);
+      }else{
+        setElevatorIsShow(false);
+      }
+    });
+  }, []);
 
   return (
     <div className={style["chat"]} ref={chatRef} id="messagesList">
@@ -67,6 +83,16 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
               ) : (
                 ""
               )}
+
+              {message.MessageVoiceContent ? (
+                <MemoMessageVoice
+                  urlServer={urlServer}
+                  MessageVoiceContent={message.MessageVoiceContent}
+                ></MemoMessageVoice>
+              ) : (
+                ""
+              )}
+
               <p className={style["chat__message-content"]}>{message.MessageContent}</p>
 
               <p className={style["chat__message-date"]}>{message.MessageDate}</p>
@@ -85,7 +111,7 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
                         answeredMessageBlock.style.cssText = `box-shadow: 0 0 10px yellow;`;
                         setTimeout(() => {
                           answeredMessageBlock.style.cssText = ``;
-                        }, 1000);
+                        }, 800);
                       }}
                     >
                       <h3>Ответ для {answeredMessage.MessageSenderName}</h3>
@@ -128,6 +154,7 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
                         message.MessageId,
                         message.MessageSenderLogin,
                         message.MessageImage,
+                        message.MessageVoiceContent,
                         e.target.closest("div")
                       );
                     }}
@@ -142,6 +169,20 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
           ))}
 
       {urlImage && <ImageBlock urlImage={urlImage} setUrlImage={setUrlImage}></ImageBlock>}
+
+      {elevatorIsShow ? (
+        <button
+          className={style["chat__toStartChat"]}
+          title="В начало чата"
+          onClick={() => {
+            chatRef.current.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <img src={ToDownIcon} />
+        </button>
+      ) : (
+        ""
+      )}
     </div>
   );
 }

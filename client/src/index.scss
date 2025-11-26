@@ -52,7 +52,9 @@ button:hover {
   cursor: pointer;
 }
 
-input {
+input[type="text"],
+input[type="password"],
+input[type="submit"] {
   border-radius: 8px;
   padding: 10px;
   border: 0;
@@ -130,24 +132,33 @@ textarea:focus {
   }
 }
 
-.loader_1{
-  width: 20px;
-  height: 20px;
+.loader_1 {
   background-color: vars.$accent_yellow_color;
   display: inline-block;
   border-radius: 50%;
   animation: loading_1 1s ease-in infinite;
+  filter: none !important;
+  opacity: 1 !important;
 }
 @keyframes loading_1 {
-  0%{transform: scale(1.2);}
-  50%{transform: scale(1.1);}
-  60%{transform: scale(1.16);}
-  70%{transform: scale(1.08);}
-  80%{transform: scale(1.2);}
+  0% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  60% {
+    transform: scale(1.16);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  80% {
+    transform: scale(1.2);
+  }
 }
 
-
-.notification{
+.notification {
   position: fixed;
   top: 20%;
   left: 0;
@@ -161,9 +172,18 @@ textarea:focus {
   animation: notificationAnim 2.8s ease-in-out 1 forwards;
 }
 @keyframes notificationAnim {
-  0%{transform: translate(-100%, 0);}
-  20%{transform: translate(0%, 0);}
-  90%{transform: translate(0, 50%);opacity: 1;}
-  100%{transform: translate(-100%, 50%); opacity: 0;}
+  0% {
+    transform: translate(-100%, 0);
+  }
+  20% {
+    transform: translate(0%, 0);
+  }
+  90% {
+    transform: translate(0, 50%);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-100%, 50%);
+    opacity: 0;
+  }
 }
-

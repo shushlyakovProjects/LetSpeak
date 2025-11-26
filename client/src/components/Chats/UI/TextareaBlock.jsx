@@ -1,10 +1,11 @@
 import React from "react";
 import style from "../Chats.module.scss";
 
-import EmojiIcon from "../../../assets/textarea/Emoji.svg";
-import SendIcon from "../../../assets/textarea/Send.svg";
-import AddIcon from "../../../assets/textarea/Add.svg";
-import MicrophoneIcon from "../../../assets/textarea/Microphone.svg";
+import EmojiIcon from "../../../assets/icons/Emoji.svg";
+import SendIcon from "../../../assets/icons/Send.svg";
+import AddIcon from "../../../assets/icons/Add.svg";
+import MicrophoneIcon from "../../../assets/icons/Microphone.svg";
+import MicrophoneStopIcon from "../../../assets/icons/Stop.svg";
 
 export default function TextareaBlock({
   urlServer,
@@ -16,13 +17,17 @@ export default function TextareaBlock({
   emojiPack,
   emojiRef,
   chatRef,
-  sendVoiceMessage,
   inputFileRef,
   isLoadImage,
   setIsLoadImage,
   setFileFromBuffer,
   selectedMessage,
   setSelectedMessage,
+
+  recordingVoiceMessage,
+  buttonVoiceMessageRef,
+  isRecordingVoiceMessage,
+  sendRecordingVoiceMessage,
 }) {
   return (
     <div
@@ -64,39 +69,49 @@ export default function TextareaBlock({
       </section>
 
       <section className={style["textarea__bottom"]}>
-        <textarea
-          className={style["textarea__field"]}
-          ref={textareaRef}
-          placeholder="Сообщение..."
-          onPaste={(e) => {
-            if (e.clipboardData && e.clipboardData.types.includes("Files")) {
-              const fileFromBuffer = e.clipboardData.files[0];
-              if (fileFromBuffer.type.startsWith("image/")) {
-                setFileFromBuffer(fileFromBuffer);
-                setIsLoadImage(fileFromBuffer.name);
+        {isRecordingVoiceMessage ? (
+          <div className={style["textarea__filler"]}>Идет запись...</div>
+        ) : (
+          <textarea
+            className={style["textarea__field"]}
+            ref={textareaRef}
+            placeholder="Сообщение..."
+            onPaste={(e) => {
+              if (e.clipboardData && e.clipboardData.types.includes("Files")) {
+                const fileFromBuffer = e.clipboardData.files[0];
+                if (fileFromBuffer.type.startsWith("image/")) {
+                  setFileFromBuffer(fileFromBuffer);
+                  setIsLoadImage(fileFromBuffer.name);
+                }
               }
-            }
-          }}
-          onKeyDown={(e) => {
-            sendIsTyping();
-            if (e.code == "Enter") {
-              if (!e.shiftKey) {
-                e.preventDefault();
-                sendMessage(textareaRef.current.value);
-                textareaRef.current.value = "";
+            }}
+            onKeyDown={(e) => {
+              sendIsTyping();
+              if (e.code == "Enter") {
+                if (!e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(textareaRef.current.value);
+                  textareaRef.current.value = "";
+                }
               }
-            }
-          }}
-        ></textarea>
+            }}
+          ></textarea>
+        )}
+
         <nav className={style["textarea__nav"]}>
           <button
             className={style["textarea__button"]}
-            title="Голосовое сообщение"
-            onClick={() => {
-              sendVoiceMessage();
+            ref={buttonVoiceMessageRef}
+            
+            onClick={(e) => {
+              recordingVoiceMessage();
             }}
           >
-            <img src={MicrophoneIcon} alt="" />
+            {isRecordingVoiceMessage ? (
+              <img data-modif="nongray" src={MicrophoneStopIcon} title="Отмена записи" />
+            ) : (
+              <img src={MicrophoneIcon} title="Голосовое сообщение" />
+            )}
           </button>
           <button
             className={style["textarea__button"]}
@@ -175,10 +190,14 @@ export default function TextareaBlock({
             className={style["textarea__button"]}
             title="Отправить"
             onClick={() => {
-              sendMessage(textareaRef.current.value);
+              if (isRecordingVoiceMessage) {
+                sendRecordingVoiceMessage();
+              } else {
+                sendMessage();
+              }
             }}
           >
-            <img src={SendIcon} alt="" />
+            <img data-modif={isRecordingVoiceMessage ? "nongray" : ''} src={SendIcon} alt="" />
           </button>
         </nav>
       </section>
