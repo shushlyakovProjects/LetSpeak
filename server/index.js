@@ -34,7 +34,7 @@ const socketIo = require("socket.io");
 
 //  ========= Server Mode ==========
 
-const IS_PRODACTION = false;
+const IS_PRODACTION = true;
 
 //  ========= Server Mode ==========
 

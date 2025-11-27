@@ -28,6 +28,7 @@ export default function TextareaBlock({
   buttonVoiceMessageRef,
   isRecordingVoiceMessage,
   sendRecordingVoiceMessage,
+  voiceTimerValue,
 }) {
   return (
     <div
@@ -44,6 +45,14 @@ export default function TextareaBlock({
               {selectedMessage.MessageContent ? (
                 <p>
                   <span>{">"}</span> {selectedMessage.MessageContent}
+                </p>
+              ) : (
+                ""
+              )}
+
+              {selectedMessage.MessageVoiceContent ? (
+                <p>
+                  <span>♪</span> Голосовое сообщение
                 </p>
               ) : (
                 ""
@@ -70,7 +79,10 @@ export default function TextareaBlock({
 
       <section className={style["textarea__bottom"]}>
         {isRecordingVoiceMessage ? (
-          <div className={style["textarea__filler"]}>Идет запись...</div>
+          <div className={style["textarea__filler"]}>
+            Идет запись... ({Math.floor(voiceTimerValue / 60)}:
+            {voiceTimerValue % 60 < 10 ? "0" + (voiceTimerValue % 60) : voiceTimerValue % 60})
+          </div>
         ) : (
           <textarea
             className={style["textarea__field"]}
@@ -102,7 +114,6 @@ export default function TextareaBlock({
           <button
             className={style["textarea__button"]}
             ref={buttonVoiceMessageRef}
-            
             onClick={(e) => {
               recordingVoiceMessage();
             }}
@@ -197,7 +208,7 @@ export default function TextareaBlock({
               }
             }}
           >
-            <img data-modif={isRecordingVoiceMessage ? "nongray" : ''} src={SendIcon} alt="" />
+            <img data-modif={isRecordingVoiceMessage ? "nongray" : ""} src={SendIcon} alt="" />
           </button>
         </nav>
       </section>

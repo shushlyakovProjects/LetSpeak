@@ -14,7 +14,7 @@ export default function ChatsContainer({ createNotification }) {
     Жесты: ["🤚", "👋", "👌", "🤌", "✌️", "💪"],
     Другое: ["❤️", "🤖", "🙈", "👀", "💩"],
   };
-  // const urlServer = "https://5.138.95.76:3000/static/";
+  // const urlServer = "https://46.63.210.1:3000/static/";
   const urlServer = "http://localhost:3000/static/";
 
   const navigate = useNavigate();
@@ -258,20 +258,28 @@ export default function ChatsContainer({ createNotification }) {
 
   const mediaStream = useRef(null);
   const chunks = useRef([]);
-  const [isRecordingVoiceMessage, setIsRecordingVoiceMessage] = useState(false);
+  const [isRecordingVoiceMessage, setIsRecordingVoiceMessage] = useState(0);
   const isRecordingVMCancelled = useRef(false);
+  const voiceTimerRef = useRef(false);
+  const [voiceTimerValue, setVoiceTimerValue] = useState(0);
 
   const recordingVoiceMessage = async () => {
     if (!isRecordingVoiceMessage) {
       try {
         mediaStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const recorder = new MediaRecorder(mediaStream.current);
+        const options = { mimeType: 'audio/webm', audioBitsPerSecond: 128000 };
+        const recorder = new MediaRecorder(mediaStream.current, options);
+
+        voiceTimerRef.current = setInterval(() => {
+          setVoiceTimerValue((prev) => prev + 1);
+        }, 1000);
 
         recorder.ondataavailable = (e) => {
+          clearInterval(voiceTimerRef.current);
+          setVoiceTimerValue(0);
+
           // Опасное место, в дальнейшем лучше придумать способ фильтрации записей менее 1сек
           if (e.data.size > 20000) {
-            console.log(e.data.size);
-            
             chunks.current.push(e.data);
 
             if (isRecordingVMCancelled.current) {
@@ -292,12 +300,16 @@ export default function ChatsContainer({ createNotification }) {
         console.log(error);
         buttonVoiceMessageRef.current.classList.remove("loader_1");
         createNotification("permissionDenied");
+        clearInterval(voiceTimerRef.current);
+        setVoiceTimerValue(0);
       }
     } else {
       // Остановка записи
       isRecordingVMCancelled.current = true;
       mediaStream.current?.getTracks().forEach((track) => track.stop());
       setIsRecordingVoiceMessage(false);
+      clearInterval(voiceTimerRef.current);
+      setVoiceTimerValue(0);
     }
   };
 
@@ -333,6 +345,7 @@ export default function ChatsContainer({ createNotification }) {
       buttonVoiceMessageRef={buttonVoiceMessageRef}
       isRecordingVoiceMessage={isRecordingVoiceMessage}
       sendRecordingVoiceMessage={sendRecordingVoiceMessage}
+      voiceTimerValue={voiceTimerValue}
     ></ChatsPresentation>
   );
 }

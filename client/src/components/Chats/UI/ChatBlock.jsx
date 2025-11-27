@@ -17,7 +17,7 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
     document.getElementById("messagesList").addEventListener("scroll", () => {
       if (document.getElementById("messagesList").scrollTop < -200 && !elevatorIsShow) {
         setElevatorIsShow(true);
-      }else{
+      } else {
         setElevatorIsShow(false);
       }
     });
@@ -87,6 +87,7 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
               {message.MessageVoiceContent ? (
                 <MemoMessageVoice
                   urlServer={urlServer}
+                  MessageId={message.MessageId}
                   MessageVoiceContent={message.MessageVoiceContent}
                 ></MemoMessageVoice>
               ) : (
@@ -123,11 +124,21 @@ export default function ChatBlock({ currentUser, messages, deleteMessage, chatRe
                         ""
                       )}
 
+                       {answeredMessage.MessageVoiceContent ? (
+                        <p>
+                          <span>♪</span> Голосовое сообщение
+                        </p>
+                      ) : (
+                        ""
+                      )}
+
                       {answeredMessage.MessageImage ? (
                         <img src={urlServer + answeredMessage.MessageImage} alt="" />
                       ) : (
                         ""
                       )}
+
+                      
                     </div>
                   );
                 } else {

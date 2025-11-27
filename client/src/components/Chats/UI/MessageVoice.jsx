@@ -7,7 +7,7 @@ import style from "../Chats.module.scss";
 import PlayIcon from "../../../assets/icons/Send.svg";
 import PauseIcon from "../../../assets/icons/Pause.svg";
 
-export default memo(function MessageVoice({ urlServer, MessageVoiceContent }) {
+export default memo(function MessageVoice({ urlServer, MessageVoiceContent, MessageId }) {
   const audioRef = useRef(null);
   const [duration, setDuration] = useState(null);
   const [currentValue, setCurrentValue] = useState(0);
@@ -26,7 +26,7 @@ export default memo(function MessageVoice({ urlServer, MessageVoiceContent }) {
     let mins = Math.floor(timeInSec / 60);
     let sec = Math.floor(timeInSec % 60);
     sec = sec < 10 ? "0" + sec : sec;
-    return `${mins}:${sec}`;
+    return `${mins == Infinity || mins != mins ? "0" : mins}:${sec == Infinity || sec != sec ? "0" : sec}`;
   }
 
   useEffect(() => {
@@ -37,6 +37,13 @@ export default memo(function MessageVoice({ urlServer, MessageVoiceContent }) {
         setDuration(audio.duration.toFixed(2));
       });
       audio.addEventListener("play", (e) => {
+        let messagesList = document.querySelectorAll("#messagesList audio");
+        Array.from(messagesList).forEach((voiceMessage) => {
+          if (voiceMessage.getAttribute("voice-id") != MessageId) {
+            voiceMessage.pause();
+          }
+        });
+
         setIsPlaying(true);
         timer = setInterval(() => {
           const currentProgress = Math.round((audio.currentTime / audio.duration) * 100);
@@ -85,7 +92,19 @@ export default memo(function MessageVoice({ urlServer, MessageVoiceContent }) {
           step="1"
           value={currentValue}
           onInput={(e) => {
-            setCurrentTime(e.target.value);
+            setCurrentTime(e.target.value, true);
+          }}
+          onMouseDown={(e) => {
+            audioRef.current.pause();
+          }}
+          onTouchStart={() => {
+            audioRef.current.pause();
+          }}
+          onMouseUp={(e) => {
+            audioRef.current.play();
+          }}
+          onTouchEnd={() => {
+            audioRef.current.play();
           }}
         />
         <span className={style["voice_message__duration"]}>
@@ -93,7 +112,7 @@ export default memo(function MessageVoice({ urlServer, MessageVoiceContent }) {
         </span>
       </nav>
 
-      <audio src={urlServer + MessageVoiceContent} ref={audioRef} preload="metadata" />
+      <audio voice-id={MessageId} src={urlServer + MessageVoiceContent} ref={audioRef} preload="metadata" />
     </>
   );
 });
