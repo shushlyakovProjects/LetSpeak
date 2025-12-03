@@ -37,7 +37,7 @@ export default function RegistrationFormContainer() {
     
     if (currentUser.hasOwnProperty("UserLogin")) {
       console.log('Переадресация!!!');
-      navigate("/chats");
+      navigate("/main");
     }
   }, [currentUser]);
 

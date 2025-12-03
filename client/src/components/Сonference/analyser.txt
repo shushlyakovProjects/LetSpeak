@@ -1,0 +1,25 @@
+     // const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // const source = audioCtx.createMediaElementSource(audioPlayerRef.current);
+
+      // // Аналитический узел для измерения уровней
+      // const analyser = audioCtx.createAnalyser();
+      // analyser.fftSize = 2048;
+      // const bufferLength = analyser.frequencyBinCount;
+      // const dataArray = new Uint8Array(bufferLength);
+
+      // // Подключаем узлы
+      // source.connect(analyser);
+      // analyser.connect(audioCtx.destination);
+
+      // function updateLevel() {
+      //   requestAnimationFrame(updateLevel);
+
+      //   analyser.getByteFrequencyData(dataArray);
+      //   const average = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+
+      //   // Показываем среднее значение амплитуды
+      //   console.log(`Уровень звука: ${Math.round(average)}`);
+      // }
+
+      // // Начинаем обновление уровня
+      // updateLevel();

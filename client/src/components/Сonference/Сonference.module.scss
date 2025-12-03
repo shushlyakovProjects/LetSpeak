@@ -1,0 +1,47 @@
+@use "../../vars";
+@use "../../mixins";
+
+.wrapper-conference {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  grid-template-rows: repeat(3, 50px);
+  justify-items: center;
+  align-content: center;
+  align-items: center;
+  gap: 30px;
+
+  .conference__participants {
+    display: flex;
+    max-width: 60%;
+    overflow: auto;
+    gap: 10px;
+    article {
+      background-color: vars.$light_gray_color;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  }
+
+  .conference__indicator {
+    background-color: vars.$accent_yellow_color;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    transition-duration: 0.1s;
+  }
+
+  .conference__menu {
+    text-align: center;
+    gap: 20px;
+
+    button {
+      background-color: vars.$accent_yellow_color;
+      color: vars.$dark_gray_color;
+      width: 150px;
+      border-radius: 10px;
+      margin-top: 5px;
+    }
+  }
+}

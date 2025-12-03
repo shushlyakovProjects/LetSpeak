@@ -1,9 +1,11 @@
 const connectionDB = require("./dbController");
 const fs = require("fs");
+let = ConferenceParticipants = [];
 
 module.exports = {
   socketHandler: (socket, io) => {
     console.log("New connection on socket!");
+    // io.ConferenceParticipants = [];
 
     socket.on("connectToSocket", ({ UserLogin, UserName }) => {
       if (!UserLogin || !UserName) return;
@@ -129,7 +131,28 @@ module.exports = {
       socket.broadcast.emit("whoIsTyping", UserName);
     });
 
+    socket.on("showParticipantConference", () => {
+      socket.emit("showParticipantConference", ConferenceParticipants);
+    });
+
+    socket.on("addParticipantConference", (user) => {
+      ConferenceParticipants.push(user);
+      io.emit("addParticipantConference", ConferenceParticipants);
+    });
+
+    socket.on("leaveParticipantConference", (user) => {
+      ConferenceParticipants = ConferenceParticipants.filter((curuser) => curuser.UserLogin != user.UserLogin);
+      io.emit("leaveParticipantConference", ConferenceParticipants);
+    });
+
+    socket.on("streamConference", (data) => {
+      console.log(data);
+      socket.broadcast.emit("streamConference", data); // Рассылаем полученный звук остальным подключённым пользователям
+    });
+
     socket.on("disconnect", () => {
+      ConferenceParticipants = ConferenceParticipants.filter((curuser) => curuser.UserLogin != socket.UserLogin);
+      io.emit("leaveParticipantConference", ConferenceParticipants);
       console.log(`Client with ${socket.UserLogin} has been disconnected.`);
     });
   },

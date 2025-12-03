@@ -17,7 +17,7 @@ html {
 }
 @media (max-width: 500px) {
   html {
-    font-size: 14px;
+    font-size: 13px;
   }
 }
 
@@ -136,25 +136,22 @@ textarea:focus {
   background-color: vars.$accent_yellow_color;
   display: inline-block;
   border-radius: 50%;
-  animation: loading_1 1s ease-in infinite;
+  animation: loading_1 3s linear infinite;
   filter: none !important;
   opacity: 1 !important;
+
 }
 @keyframes loading_1 {
   0% {
-    transform: scale(1.2);
+    transform: scale(1) rotate(0deg);
   }
-  50% {
-    transform: scale(1.1);
-  }
+  30%{transform: scaleX(1.2) rotate(20deg);}
   60% {
-    transform: scale(1.16);
+    border-radius: 30%;
   }
-  70% {
-    transform: scale(1.08);
-  }
-  80% {
-    transform: scale(1.2);
+  80%{transform: scaleX(1) scaleY(1.2) rotate(120deg);}
+  100% {
+    transform: scale(1) rotate(180deg);
   }
 }
 

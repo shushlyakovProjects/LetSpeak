@@ -35,7 +35,7 @@ export default function AuthorizationFormContainer() {
 
   useEffect(() => {
     if (currentUser.hasOwnProperty('UserLogin')) {
-      navigate("/chats");
+      navigate("/main");
     }
   }, [currentUser]);
 

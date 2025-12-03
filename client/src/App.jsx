@@ -7,6 +7,7 @@ import ChatsContainer from "./components/Chats/ChatsContainer";
 import axios from "axios";
 import { createContext } from "react";
 import { useState } from "react";
+import MainContainer from "./components/Main/MainContainer";
 
 export const UserContext = createContext();
 
@@ -23,7 +24,7 @@ export default function App() {
       .then((result) => {
         console.log(result);
         setCurrentUser(result.data);
-        navigate("/chats");
+        // navigate("/main");
       })
       .catch((error) => {
         console.log(error);
@@ -56,7 +57,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    navigate("/auth");
+    // navigate("/auth");
     tryLogin();
   }, []);
 
@@ -66,8 +67,8 @@ export default function App() {
         <Routes>
           <Route path="/reg" element={<RegistrationFormContainer />} />
           <Route path="/auth" element={<AuthorizationFormContainer />} />
-          <Route path="/chats" element={<ChatsContainer createNotification={createNotification} />} />
-          <Route path="/" element={<ChatsContainer createNotification={createNotification} />} />
+          <Route path="/main/*" element={<MainContainer createNotification={createNotification}/>} />
+          <Route exact path="/" element={<MainContainer createNotification={createNotification}/>} />
         </Routes>
       </UserContext>
     </>

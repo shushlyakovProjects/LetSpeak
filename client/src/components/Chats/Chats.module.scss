@@ -6,30 +6,10 @@
 @import "./UI/scss/voice_message";
 @import "./UI/scss/image_showblock";
 
-.wrapper {
-  background-color: vars.$background_gray_color;
-  color: vars.$text_white_color;
-
+.wrapper-chat {
   width: 100%;
   height: 100%;
-  padding: 5vh 10vw;
 
   display: flex;
   flex-direction: column;
-
-  .header_main nav{
-    flex-direction: column;
-    gap: 0;
-    button{
-      padding: 0;
-    }
-  }
-
-  @media (max-width: 500px) {
-    padding: 3vh 5vw;
-  }
-  @media (max-width: 400px) {
-    padding: 2vh 2vw;
-  }
-  
 }

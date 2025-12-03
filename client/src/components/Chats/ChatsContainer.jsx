@@ -8,14 +8,12 @@ import { UserContext } from "../../App";
 import { useState } from "react";
 import notificationSound from "../../assets/sounds/notification_sound.mp3";
 
-export default function ChatsContainer({ createNotification }) {
+export default function ChatsContainer({ createNotification, socketApi, urlServer }) {
   const emojiPack = {
     Эмоции: ["🤪", "😂", "🤗", "😁", "🫠", "😨", "😏"],
     Жесты: ["🤚", "👋", "👌", "🤌", "✌️", "💪"],
     Другое: ["❤️", "🤖", "🙈", "👀", "💩"],
   };
-  // const urlServer = "https://46.63.210.1:3000/static/";
-  const urlServer = "http://localhost:3000/static/";
 
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useContext(UserContext);
@@ -29,21 +27,17 @@ export default function ChatsContainer({ createNotification }) {
 
   const textareaRef = useRef("");
   const chatRef = useRef(null);
-  const socketApi = useRef(null);
+  // const socketApi = useRef(null);
   const emojiRef = useRef(null);
   const inputFileRef = useRef(null);
   const buttonVoiceMessageRef = useRef(null);
 
   useEffect(() => {
-    socketApi.current = io("");
-    socketApi.current.emit("connectToSocket", { UserLogin: currentUser.UserLogin, UserName: currentUser.UserName });
-    socketApi.current.emit("getGeneralChat");
+    if (socketApi == null) return;
 
-    socketApi.current.on("connectToSocket", (UserName) => {
-      createNotification("newClient", { UserName });
-    });
+    socketApi.emit("getGeneralChat");
 
-    socketApi.current.on("deleteGeneralMessage", (MessageId) => {
+    socketApi.on("deleteGeneralMessage", (MessageId) => {
       let messages = document.getElementById("messagesList").children;
       Array.from(messages).forEach((element) => {
         if (element.getAttribute("data-id") == MessageId) {
@@ -55,7 +49,7 @@ export default function ChatsContainer({ createNotification }) {
       });
     });
 
-    socketApi.current.on("whoIsTyping", (UserName) => {
+    socketApi.on("whoIsTyping", (UserName) => {
       const listWritting = new Set(whoIsTyping);
       listWritting.add(UserName);
 
@@ -79,12 +73,14 @@ export default function ChatsContainer({ createNotification }) {
       }
     });
 
-    socketApi.current.on("loadGeneralChat", (data) => {
+    socketApi.on("loadGeneralChat", (data) => {
+      console.log("чат");
+
       data.MessageDate = formatDate(new Date(data.MessageDate));
       setMessages((prev) => [data, ...prev]);
     });
 
-    socketApi.current.on("loadGeneralMessage", async (data) => {
+    socketApi.on("loadGeneralMessage", async (data) => {
       data.MessageDate = formatDate(new Date(data.MessageDate));
 
       if (data.MessageSenderLogin != currentUser.UserLogin) {
@@ -100,12 +96,7 @@ export default function ChatsContainer({ createNotification }) {
 
       setMessages((prev) => [data, ...prev]);
     });
-
-    return () => {
-      socketApi.current.off();
-      socketApi.current.close();
-    };
-  }, []);
+  }, [socketApi]);
 
   const formatDate = (date) => {
     const numberOfMonth = (date) => (date.getMonth() + 1 < 10 ? "0" + (date.getMonth() + 1) : date.getMonth() + 1);
@@ -136,7 +127,7 @@ export default function ChatsContainer({ createNotification }) {
   const deleteMessage = (MessageId, MessageSenderLogin, MessageImage, MessageVoiceContent) => {
     if (MessageSenderLogin == currentUser.UserLogin) {
       const MessageDeleted = { MessageId, MessageSenderLogin, MessageImage, MessageVoiceContent };
-      socketApi.current.emit("deleteGeneralMessage", MessageDeleted);
+      socketApi.emit("deleteGeneralMessage", MessageDeleted);
     }
   };
 
@@ -168,7 +159,7 @@ export default function ChatsContainer({ createNotification }) {
           MessageAnswerOn,
           MessageVoiceContent,
         };
-        socketApi.current.emit("addGeneralMessage", messageInfo);
+        socketApi.emit("addGeneralMessage", messageInfo);
         setIsLoadImage(false);
       })();
     } else {
@@ -181,7 +172,7 @@ export default function ChatsContainer({ createNotification }) {
         MessageAnswerOn,
         MessageVoiceContent,
       };
-      socketApi.current.emit("addGeneralMessage", messageInfo);
+      socketApi.emit("addGeneralMessage", messageInfo);
     }
 
     chatRef.current.scrollTo(0, 0);
@@ -244,7 +235,7 @@ export default function ChatsContainer({ createNotification }) {
     // console.log("Typing", currentUser.UserName);
     if (!isTyping) {
       setIsTyping(true);
-      socketApi.current.emit("whoIsTyping", currentUser.UserName);
+      socketApi.emit("whoIsTyping", currentUser.UserName);
       setTimeout(() => {
         setIsTyping(false);
         setWhoIsTyping("");
@@ -267,7 +258,7 @@ export default function ChatsContainer({ createNotification }) {
     if (!isRecordingVoiceMessage) {
       try {
         mediaStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const options = { mimeType: 'audio/webm', audioBitsPerSecond: 128000 };
+        const options = { mimeType: "audio/webm", audioBitsPerSecond: 128000 };
         const recorder = new MediaRecorder(mediaStream.current, options);
 
         voiceTimerRef.current = setInterval(() => {

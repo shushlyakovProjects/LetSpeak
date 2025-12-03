@@ -16,7 +16,7 @@
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.65.0",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^7.9.4",
+    "react-router-dom": "^7.9.6",
     "react-transition-group": "^4.4.5",
     "socket.io-client": "^4.8.1"
   },

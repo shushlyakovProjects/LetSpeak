@@ -1,0 +1,53 @@
+@use "../../vars";
+@use "../../mixins";
+
+.wrapper-main {
+  background-color: vars.$background_gray_color;
+  color: vars.$text_white_color;
+
+  width: 100%;
+  height: 100%;
+  padding: 4vh 8vw;
+
+  display: grid;
+  grid-template-rows: 10% 90%;
+
+  @media (max-width: 500px) {
+    padding: 3vh 5vw;
+  }
+  @media (max-width: 400px) {
+    padding: 2vh 2vw;
+  }
+
+  .header-main {
+    h2 {
+      display: flex;
+      gap: 10px;
+      span {
+        user-select: none;
+        cursor: pointer;
+        opacity: 0.3;
+        transition-duration: 0.4s;
+        &.active {
+          opacity: 1;
+          color: vars.$accent_yellow_color;
+        }
+      }
+      @media (max-width: 500px) {
+        flex-direction: column;
+        gap: 0;
+      }
+    }
+    nav {
+      flex-direction: column;
+      button {
+        padding: 0;
+      }
+    }
+  }
+
+  .content-main {
+    height: 100%;
+    width: 100%;
+  }
+}
