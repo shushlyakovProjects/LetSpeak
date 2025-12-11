@@ -1,0 +1,27 @@
+@use "../../vars";
+
+h2 {
+  &.waiting {
+    animation: anim 2s infinite ease;
+    @keyframes anim {
+      0% {
+        border-left: 2px solid vars.$accent_yellow_color;
+      }
+      25% {
+        border-top: 2px solid vars.$accent_yellow_color;
+      }
+      50% {
+        border-right: 2px solid vars.$accent_yellow_color;
+      }
+      75% {
+        border-bottom: 2px solid vars.$accent_yellow_color;
+      }
+    }
+  }
+
+  &.ready {
+    transform: scale(1);
+    color: vars.$accent_yellow_color;
+    opacity: 1 !important;
+  }
+}

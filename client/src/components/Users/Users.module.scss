@@ -1,0 +1,41 @@
+@use "../../vars";
+
+.users {
+  h2 {
+    margin-bottom: 20px;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__item {
+    display: grid;
+    align-items: center;
+    grid-template-columns: 20% auto 1fr;
+    padding: 5px 10px;
+    border: 1px solid vars.$text_white_color;
+    border-radius: 5px;
+
+    p:first-child {
+      font-size: 1.3rem;
+      color: vars.$accent_yellow_color;
+    }
+    p:nth-child(2) {
+      opacity: 0.4;
+    }
+    nav {
+      display: flex;
+      justify-content: end;
+      button {
+        padding: 0;
+        img {
+          width: 30px;
+          height: 30px;
+        }
+      }
+    }
+  }
+}

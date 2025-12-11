@@ -7,12 +7,15 @@ import { useEffect } from "react";
 import { io } from "socket.io-client";
 import { useState } from "react";
 
+
 export default function MainContainer({ createNotification }) {
   // const urlServer = "https://31.180.196.99:3000/static/";
   const urlServer = "http://localhost:3000/static/";
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useContext(UserContext);
+
   const [isConnected, setIsConnected] = useState(false);
+
 
   const socketApi = useRef(null);
 

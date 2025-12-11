@@ -22,6 +22,7 @@
 ### Таблицы:
 * users: UserId, UserName, UserLogin, UserPassword
 * messages: MessageId, MessageSenderLogin, MessageSenderName, MessageContent, MessageImage, MessageVoiceContent,  MessageDate, MessageAnswerOn
+* rooms: RoomId, Part1, Part2, DateCreat, DateLastCall
 
 ## Фиксы:
 * Разрез длинных слов +
@@ -53,5 +54,5 @@
 * Мб реакции ...
 * Lazy loading чата ...
 
-
+* Настроить alias пути ...
 

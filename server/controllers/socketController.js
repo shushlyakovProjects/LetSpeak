@@ -1,11 +1,11 @@
 const connectionDB = require("./dbController");
 const fs = require("fs");
-let = ConferenceParticipants = [];
+
+const Rooms = new Map();
 
 module.exports = {
   socketHandler: (socket, io) => {
     console.log("New connection on socket!");
-    // io.ConferenceParticipants = [];
 
     socket.on("connectToSocket", ({ UserLogin, UserName }) => {
       if (!UserLogin || !UserName) return;
@@ -14,6 +14,7 @@ module.exports = {
       socket.broadcast.emit("connectToSocket", UserName);
     });
 
+    // WebSocket - Чат
     socket.on("getGeneralChat", () => {
       const selectQuery = "SELECT * FROM messages";
       connectionDB.query(selectQuery, (err, result) => {
@@ -130,30 +131,126 @@ module.exports = {
     socket.on("whoIsTyping", (UserName) => {
       socket.broadcast.emit("whoIsTyping", UserName);
     });
+    // WebSocket - Чат
 
-    socket.on("showParticipantConference", () => {
-      socket.emit("showParticipantConference", ConferenceParticipants);
+    // WebRTC - Конференция
+    socket.on("OFFER", (offer) => {
+      // console.log('offer');
+      const { friendLogin, initiatorLogin } = JSON.parse(offer);
+
+      const selectQuery = `SELECT * FROM rooms WHERE (Part1='${friendLogin}' AND Part2='${initiatorLogin}') OR (Part1='${initiatorLogin}' AND Part2='${friendLogin}')`;
+      connectionDB.query(selectQuery, (err, result) => {
+        if (err) {
+          console.log(err);
+        } else {
+          if (!result.length) {
+            console.error("Комнаты нет. Должна была быть создана при подключении...");
+          } else {
+            const { RoomId } = result[0];
+            console.log(`Ваша комната №${RoomId}`);
+            console.log(`OFFER. Пользователь ${initiatorLogin} присоединился к комнате №${RoomId} и ждет собеседника!`);
+            offer = JSON.parse(offer);
+            offer.RoomId = RoomId;
+            offer = JSON.stringify(offer);
+            socket.broadcast.to(RoomId).emit("OFFER", offer);
+
+            Rooms.set(socket, { ...Rooms.get(socket), inCall: true });
+          }
+        }
+      });
     });
 
-    socket.on("addParticipantConference", (user) => {
-      ConferenceParticipants.push(user);
-      io.emit("addParticipantConference", ConferenceParticipants);
+    socket.on("ANSWER", (answer) => {
+      // console.log("ОТВЕТ", answer);
+      const RoomId = Rooms.get(socket).RoomId;
+      console.log(`ANSWER. Беседа в комнате №${RoomId} началась успешно!`);
+
+      const setDateQuery = `UPDATE rooms SET DateLastCall = '${new Date()}' WHERE rooms.RoomId = '${RoomId}'`;
+      connectionDB.query(setDateQuery, (err, result) => {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log("Дата беседы актуализирована!");
+        }
+      });
+
+      socket.join(RoomId);
+      Rooms.set(socket, { ...Rooms.get(socket), inCall: true });
+      socket.broadcast.to(RoomId).emit("ANSWER", answer);
     });
 
-    socket.on("leaveParticipantConference", (user) => {
-      ConferenceParticipants = ConferenceParticipants.filter((curuser) => curuser.UserLogin != user.UserLogin);
-      io.emit("leaveParticipantConference", ConferenceParticipants);
+    socket.on("ICE_CANDIDATE", (candidate) => {
+      const RoomId = Rooms.get(socket)?.RoomId;
+      console.log(`ICE_CANDIDATE. Room № ${RoomId}`);
+      socket.broadcast.to(RoomId).emit("ICE_CANDIDATE", candidate);
     });
 
-    socket.on("streamConference", (data) => {
-      console.log(data);
-      socket.broadcast.emit("streamConference", data); // Рассылаем полученный звук остальным подключённым пользователям
+    socket.on("JOIN_ROOM", ({ initiatorLogin, friendLogin }) => {
+      // console.log("JOIN_ROOM");
+
+      const selectQuery = `SELECT * FROM rooms WHERE (Part1='${friendLogin}' AND Part2='${initiatorLogin}') OR (Part1='${initiatorLogin}' AND Part2='${friendLogin}')`;
+      connectionDB.query(selectQuery, (err, result) => {
+        if (err) {
+          console.log(err);
+        } else {
+          if (!result.length) {
+            console.log("Комнаты пока нет. Создаем...");
+            const createQuery = `INSERT INTO rooms (RoomId, Part1, Part2, DateCreat, DateLastCall) VALUES (NULL, '${initiatorLogin}', '${friendLogin}', '${new Date()}', null)`;
+            connectionDB.query(createQuery, (err, result) => {
+              if (err) {
+                console.log(err);
+              } else {
+                const RoomId = result.insertId;
+                console.log(`Комната №${RoomId} создана успешно!`);
+                console.log(`JOIN_ROOM. Пользователь ${initiatorLogin} присоединился к комнате №${RoomId}!`);
+                socket.join(RoomId);
+                Rooms.set(socket, { RoomId, UserLogin: initiatorLogin, inCall: false });
+
+                const roomInfo = Array.from(Rooms).map((room) => {
+                  const info = room[1];
+                  if (info.RoomId == RoomId) return info;
+                });
+                socket.emit("JOIN_ROOM", roomInfo);
+              }
+            });
+          } else {
+            const { RoomId } = result[0];
+            console.log(`JOIN_ROOM. Пользователь ${initiatorLogin} присоединился к комнате №${RoomId}!`);
+            socket.join(RoomId);
+            Rooms.set(socket, { RoomId, UserLogin: initiatorLogin, inCall: false });
+
+            const roomInfo = Array.from(Rooms).map((room) => {
+              const info = room[1];
+              if (info.RoomId == RoomId) return info;
+            });
+            socket.emit("JOIN_ROOM", roomInfo);
+          }
+        }
+      });
     });
 
+    socket.on("LEAVE_CALL", () => {
+      const RoomId = Rooms.get(socket)?.RoomId;
+      Rooms.set(socket, { ...Rooms.get(socket), inCall: false });
+      socket.broadcast.to(RoomId).emit("LEAVE_CALL", Rooms.get(socket));
+    });
+
+    socket.on("LEAVE_ROOM", ({ UserLogin }) => {
+      const RoomId = Rooms.get(socket).RoomId;
+      console.log(`LEAVE_ROOM. Пользователь ${UserLogin} отключился от комнаты №${RoomId}`);
+      socket.leave(RoomId);
+      Rooms.delete(socket);
+      // socket.broadcast.to(RoomId).emit("LEAVE_ROOM", UserLogin);
+      socket.broadcast.to(RoomId).emit("LEAVE_CALL", Rooms.get(socket));
+    });
+    // WebRTC - Конференция
+
+    // Отключение
     socket.on("disconnect", () => {
-      ConferenceParticipants = ConferenceParticipants.filter((curuser) => curuser.UserLogin != socket.UserLogin);
-      io.emit("leaveParticipantConference", ConferenceParticipants);
-      console.log(`Client with ${socket.UserLogin} has been disconnected.`);
+      const RoomId = Rooms.get(socket)?.RoomId;
+      if (RoomId) socket.leave(RoomId);
+      Rooms.delete(socket);
+      console.log(`Client with login ${socket.UserLogin} has been disconnected from Socket!`);
     });
   },
 };

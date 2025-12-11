@@ -1,0 +1,492 @@
+import React, { useState, useRef, useEffect } from 'react';
+
+const VoiceConference = ({ socketApi }) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  const mediaSourceRef = useRef(null);
+  const audioPlayerRef = useRef(null);
+  const sourceBufferRef = useRef(null);
+  const urlBinRef = useRef(null);
+  
+  // Очередь для хранения данных, пока SourceBuffer обновляется
+  const pendingChunksRef = useRef([]);
+  const isUpdatingRef = useRef(false);
+  const isInitializedRef = useRef(false);
+
+  // Очистка при размонтировании
+  useEffect(() => {
+    return () => {
+      stopConference();
+    };
+  }, []);
+
+  // Обработчик обновления SourceBuffer
+  const handleUpdateEnd = () => {
+    isUpdatingRef.current = false;
+    
+    // Если есть ожидающие чанки, обрабатываем их
+    if (pendingChunksRef.current.length > 0 && sourceBufferRef.current) {
+      processNextChunk();
+    }
+  };
+
+  // Обработчик ошибок MediaSource
+  const handleSourceOpen = () => {
+    console.log("MediaSource открыт");
+    
+    try {
+      sourceBufferRef.current = mediaSourceRef.current.addSourceBuffer('audio/webm; codecs="opus"');
+      sourceBufferRef.current.mode = 'sequence'; // Важно для потокового аудио
+      sourceBufferRef.current.addEventListener('updateend', handleUpdateEnd);
+      sourceBufferRef.current.addEventListener('error', (e) => {
+        console.error("SourceBuffer error:", e);
+      });
+      
+      console.log("SourceBuffer создан");
+      isInitializedRef.current = true;
+      
+      // Начинаем обработку накопленных чанков
+      if (pendingChunksRef.current.length > 0) {
+        processNextChunk();
+      }
+    } catch (error) {
+      console.error("Ошибка создания SourceBuffer:", error);
+      resetMediaSource();
+    }
+  };
+
+  const processNextChunk = () => {
+    if (!sourceBufferRef.current || 
+        sourceBufferRef.current.updating || 
+        mediaSourceRef.current?.readyState !== 'open') {
+      return;
+    }
+
+    if (pendingChunksRef.current.length > 0) {
+      const chunk = pendingChunksRef.current.shift();
+      isUpdatingRef.current = true;
+      
+      try {
+        const segmentUint8 = new Uint8Array(chunk);
+        sourceBufferRef.current.appendBuffer(segmentUint8);
+      } catch (error) {
+        console.error("Ошибка добавления данных в буфер:", error);
+        isUpdatingRef.current = false;
+        
+        // При ошибке пытаемся сбросить и перезапустить
+        if (mediaSourceRef.current?.readyState === 'open') {
+          sourceBufferRef.current.abort();
+          sourceBufferRef.current.remove(0, Infinity);
+        }
+      }
+    }
+  };
+
+  // Обработчик входящих данных
+  const handleStreamData = (data) => {
+    if (!mediaSourceRef.current || mediaSourceRef.current.readyState !== 'open') {
+      console.warn("MediaSource не готов");
+      return;
+    }
+
+    // Добавляем данные в очередь
+    pendingChunksRef.current.push(data);
+
+    // Если SourceBuffer инициализирован и не обновляется, начинаем обработку
+    if (sourceBufferRef.current && !isUpdatingRef.current && isInitializedRef.current) {
+      processNextChunk();
+    }
+  };
+
+  const startConference = async () => {
+    if (!socketApi || isConnected) return;
+
+    console.log("Подключение к конференции...");
+    
+    try {
+      // Сброс предыдущих состояний
+      stopConference();
+      
+      // Инициализация MediaSource
+      mediaSourceRef.current = new MediaSource();
+      mediaSourceRef.current.addEventListener('sourceopen', handleSourceOpen);
+      mediaSourceRef.current.addEventListener('error', (e) => {
+        console.error("MediaSource error:", e);
+      });
+
+      // Создаем URL для MediaSource
+      urlBinRef.current = URL.createObjectURL(mediaSourceRef.current);
+      
+      // Настраиваем аудио элемент
+      audioPlayerRef.current = new Audio();
+      audioPlayerRef.current.src = urlBinRef.current;
+      audioPlayerRef.current.autoplay = true;
+      
+      // Обработчики для аудио
+      audioPlayerRef.current.addEventListener('playing', () => {
+        console.log("Аудио воспроизводится");
+        setIsPlaying(true);
+      });
+      
+      audioPlayerRef.current.addEventListener('error', (e) => {
+        console.error("Audio element error:", e);
+      });
+
+      // Подключаем обработчик данных от сервера
+      socketApi.on("streamConference", handleStreamData);
+      
+      // Стартуем воспроизведение
+      await audioPlayerRef.current.play().catch(error => {
+        console.error("Ошибка воспроизведения:", error);
+      });
+      
+      setIsConnected(true);
+      console.log("Подключено к конференции");
+      
+    } catch (error) {
+      console.error("Ошибка запуска конференции:", error);
+      resetMediaSource();
+      setIsConnected(false);
+    }
+  };
+
+  const resetMediaSource = () => {
+    console.log("Сброс MediaSource");
+    
+    // Отключаем обработчики
+    if (socketApi) {
+      socketApi.off("streamConference", handleStreamData);
+    }
+    
+    // Очищаем SourceBuffer
+    if (sourceBufferRef.current) {
+      try {
+        sourceBufferRef.current.removeEventListener('updateend', handleUpdateEnd);
+        if (!sourceBufferRef.current.updating) {
+          sourceBufferRef.current.abort();
+        }
+      } catch (e) {
+        console.warn("Ошибка при очистке SourceBuffer:", e);
+      }
+      sourceBufferRef.current = null;
+    }
+    
+    // Очищаем MediaSource
+    if (mediaSourceRef.current) {
+      try {
+        if (mediaSourceRef.current.readyState === 'open') {
+          mediaSourceRef.current.endOfStream();
+        }
+      } catch (e) {
+        console.warn("Ошибка при закрытии MediaSource:", e);
+      }
+      mediaSourceRef.current = null;
+    }
+    
+    // Освобождаем URL
+    if (urlBinRef.current) {
+      URL.revokeObjectURL(urlBinRef.current);
+      urlBinRef.current = null;
+    }
+    
+    // Останавливаем аудио
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.src = '';
+      audioPlayerRef.current = null;
+    }
+    
+    // Сбрасываем состояния
+    pendingChunksRef.current = [];
+    isUpdatingRef.current = false;
+    isInitializedRef.current = false;
+    setIsPlaying(false);
+  };
+
+  const stopConference = () => {
+    console.log("Отключение от конференции");
+    resetMediaSource();
+    setIsConnected(false);
+    
+    if (socketApi) {
+      socketApi.off("streamConference", handleStreamData);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={startConference} disabled={isConnected}>
+        {isConnected ? 'Подключено' : 'Подключиться к конференции'}
+      </button>
+      
+      <button onClick={stopConference} disabled={!isConnected}>
+        Отключиться
+      </button>
+      
+      {isConnected && (
+        <div>
+          <p>Статус: {isPlaying ? 'Воспроизводится' : 'Ожидание данных'}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VoiceConference;
+
+
+
+
+
+
+
+
+======================
+// socketApi.emit("showParticipantConference");
+    // socketApi.on("showParticipantConference", (ConferenceParticipants) => {
+    //   setParticipants(ConferenceParticipants);
+    // });
+
+    // socketApi.on("addParticipantConference", (ConferenceParticipants) => {
+    //   setParticipants(ConferenceParticipants);
+    // });
+
+    // socketApi.on("leaveParticipantConference", (ConferenceParticipants) => {
+    //   setParticipants(ConferenceParticipants);
+    // });
+
+
+
+
+
+
+
+
+
+    ======================
+
+    
+  // const startConference = async () => {
+  //   if (!socketApi) return;
+
+  //   if (!isConnected) {
+  //     console.log("Попытка подключения к конференции...");
+  //     setIsConnected(true);
+
+  //     mediaSourceRef.current = new MediaSource();
+  //     audioPlayerRef.current = new Audio();
+  //     urlBinRef.current = URL.createObjectURL(mediaSourceRef.current);
+  //     audioPlayerRef.current.src = urlBinRef.current;
+  //     audioPlayerRef.current.play();
+
+  //     let pendingChunks = [];
+
+  //     mediaSourceRef.current.addEventListener("sourceopen", () => {
+  //       sourceBufferRef.current = mediaSourceRef.current.addSourceBuffer('audio/webm; codecs="opus"');
+  //       sourceBufferRef.current.mode = "sequence";
+
+  //       console.log("MediaSource и SourceBuffer готовы");
+
+  //       socketApi.on("streamConference", (data) => {
+  //         console.log("Новые данные пришли");
+  //         pendingChunks.push(data);
+
+  //         if (sourceBufferRef.current.buffered.length > 1) {
+  //           sourceBufferRef.current.remove(0, Infinity);
+  //         }
+  //         console.log(sourceBufferRef.current);
+
+  //         if (
+  //           sourceBufferRef.current &&
+  //           mediaSourceRef.current.readyState === "open" &&
+  //           !sourceBufferRef.current.updating
+  //         ) {
+  //           try {
+  //             const segmentUint8 = new Uint8Array(data);
+  //             sourceBufferRef.current.appendBuffer(segmentUint8);
+  //           } catch (error) {
+  //             console.error("Ошибка при добавлении данных:", error);
+  //           }
+  //         }
+  //       });
+  //     });
+  //   }
+  // };
+
+  // const finishConference = () => {
+  //   try {
+  //     if (mediaSourceRef.current) {
+  //       console.log("Завершение конференции. Очистка...");
+  //       socketApi.off("streamConference");
+  //       myVoiceIndicatorRef.current.classList.remove("loader_1");
+  //       disableMicrophone();
+  //       clearInterval(timerRef.current);
+  //       setIsConnected(false);
+
+  //       // mediaSourceRef.current.removeSourceBuffer(sourceBufferRef.current);
+  //       sourceBufferRef.current = null;
+
+  //       // audioPlayerRef.current.pause();
+  //       // URL.revokeObjectURL(urlBinRef.current);
+  //       // audioPlayerRef.current.load();
+
+  //       // urlBinRef.current = null;
+  //       // audioPlayerRef.current.src = "";
+
+  //       // for (let i = 0; i < mediaSourceRef.current.sourceBuffers.length; i++) {
+  //       //   mediaSourceRef.current.removeSourceBuffer(mediaSourceRef.current.sourceBuffers[i]);
+  //       // }
+  //       // mediaSourceRef.current = null;
+  //       // sourceBufferRef.current = null;
+
+  //       // socketApi.emit("leaveParticipantConference", {
+  //       //   UserName: currentUser.UserName,
+  //       //   UserLogin: currentUser.UserLogin,
+  //       // });
+  //     }
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
+
+  // const enableMicrophone = async () => {
+  //   try {
+  //     if (!isMicrophoneEnabled) {
+  //       if (!isConnected) {
+  //         startConference();
+  //       }
+
+  //       setIsMicrophoneEnabled(true);
+  //       console.log("Микрофон включен");
+
+  //       let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  //       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs="opus"' });
+
+  //       let audioCtx = null;
+  //       let analyser = null;
+  //       let frequencyArray = [];
+  //       try {
+  //         audioCtx = new window.AudioContext();
+  //         const sourceNode = audioCtx.createMediaStreamSource(stream);
+  //         analyser = audioCtx.createAnalyser();
+
+  //         analyser.minDecibels = -100;
+  //         analyser.maxDecibels = 0;
+  //         analyser.smoothingTimeConstant = 0;
+
+  //         sourceNode.connect(analyser);
+  //         frequencyArray = new Uint8Array(analyser.frequencyBinCount);
+  //       } catch (error) {
+  //         console.warn("Анализатор голоса не доступен в данной версии браузерера.");
+  //       }
+
+  //       mediaRecorder.ondataavailable = (event) => {
+  //         if (event.data.size > 0) {
+  //           if (audioCtx && analyser) {
+  //             let totalVolume = 0;
+  //             analyser.getByteFrequencyData(frequencyArray);
+  //             for (let i = 0; i < frequencyArray.length; i++) {
+  //               totalVolume += frequencyArray[i];
+  //             }
+
+  //             const currentVolume = (totalVolume / frequencyArray.length / 10) * 0.5 + 0.6;
+
+  //             myVoiceIndicatorRef.current.style.cssText = `box-shadow: 0 0 ${10 * currentVolume}px yellow`;
+  //           }
+
+  //           socketApi.emit("streamConference", event.data);
+  //         }
+  //       };
+
+  //       mediaRecorder.start();
+
+  //       timerRef.current = setInterval(() => {
+  //         mediaRecorder.requestData(); // Запрашиваем готовые данные
+  //       }, 50);
+  //     }
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
+
+  // const disableMicrophone = () => {
+  //   if (isMicrophoneEnabled) {
+  //     setIsMicrophoneEnabled(false);
+  //     clearInterval(timerRef.current);
+  //     myVoiceIndicatorRef.current.style.cssText = "";
+  //     console.log("Микрофон отключен");
+  //   }
+  // };
+
+
+
+==============================
+const enableMicrophone = async () => {
+    try {
+      if (!isMicrophoneEnabled) {
+        if (!isConnected) {
+          startConference();
+        }
+
+        setIsMicrophoneEnabled(true);
+        console.log("Микрофон включен");
+
+        let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs="opus"' });
+
+        let audioCtx = null;
+        let analyser = null;
+        let frequencyArray = [];
+        try {
+          audioCtx = new window.AudioContext();
+          const sourceNode = audioCtx.createMediaStreamSource(stream);
+          analyser = audioCtx.createAnalyser();
+
+          analyser.minDecibels = -100;
+          analyser.maxDecibels = 0;
+          analyser.smoothingTimeConstant = 0;
+
+          sourceNode.connect(analyser);
+          frequencyArray = new Uint8Array(analyser.frequencyBinCount);
+        } catch (error) {
+          console.warn("Анализатор голоса не доступен в данной версии браузера.");
+        }
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            if (audioCtx && analyser) {
+              let totalVolume = 0;
+              analyser.getByteFrequencyData(frequencyArray);
+              for (let i = 0; i < frequencyArray.length; i++) {
+                totalVolume += frequencyArray[i];
+              }
+
+              const currentVolume = (totalVolume / frequencyArray.length / 10) * 0.5 + 0.6;
+
+              myVoiceIndicatorRef.current.style.cssText = `box-shadow: 0 0 ${10 * currentVolume}px yellow`;
+            }
+
+            socketApi.emit("streamConference", { roomId, data: event.data });
+          }
+        };
+
+        mediaRecorder.start();
+
+        timerRef.current = setInterval(() => {
+          mediaRecorder.requestData(); // Запрашиваем готовые данные
+        }, 50);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const disableMicrophone = () => {
+    if (isMicrophoneEnabled) {
+      setIsMicrophoneEnabled(false);
+      clearInterval(timerRef.current);
+      myVoiceIndicatorRef.current.style.cssText = "";
+      console.log("Микрофон отключен");
+    }
+  };

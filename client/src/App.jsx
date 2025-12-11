@@ -22,7 +22,6 @@ export default function App() {
     axios
       .post("/api/authorization")
       .then((result) => {
-        console.log(result);
         setCurrentUser(result.data);
         // navigate("/main");
       })

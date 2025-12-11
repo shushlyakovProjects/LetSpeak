@@ -6,26 +6,29 @@
   height: 100%;
 
   display: grid;
-  grid-template-rows: repeat(3, 50px);
+  grid-template-rows: 50px 15vh 50px;
   justify-items: center;
   align-content: center;
   align-items: center;
   gap: 30px;
 
-  .conference__participants {
-    display: flex;
-    max-width: 60%;
-    overflow: auto;
-    gap: 10px;
-    article {
-      background-color: vars.$light_gray_color;
-      padding: 10px;
-      border-radius: 5px;
+  .conference__friend {
+    text-align: center;
+    p {
+      opacity: 0.3;
+      margin-bottom: 10px;
+    }
+    h2 {
+      transition-duration: 0.5s;
+      border: 2px solid transparent;
+      padding: 3px;
+      border-radius: 15px;
+      opacity: 0.5;
     }
   }
 
   .conference__indicator {
-    background-color: vars.$accent_yellow_color;
+    border: 3px solid vars.$accent_yellow_color;
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -35,7 +38,9 @@
   .conference__menu {
     text-align: center;
     gap: 20px;
-
+    p {
+      font-size: 13px;
+    }
     button {
       background-color: vars.$accent_yellow_color;
       color: vars.$dark_gray_color;

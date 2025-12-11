@@ -2,6 +2,7 @@ const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const express = require("express");
 const path = require("path");
+const connectionDB = require("./controllers/dbController");
 require("dotenv").config();
 
 const app = express();
@@ -16,10 +17,8 @@ app.use("/static", express.static("uploads"));
 app.use("/static", express.static("uploads/images"));
 app.use("/static", express.static("uploads/voices"));
 
-app.get("/*splat", (req, res) => {
-  // res.send("<h1>Server is working...</h1>");
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
-});
+const { socketHandler } = require("./controllers/socketController");
+const socketIo = require("socket.io");
 
 const registrationController = require("./controllers/registrationController");
 app.use("/api/registration", registrationController);
@@ -27,16 +26,43 @@ app.use("/api/registration", registrationController);
 const authorizationController = require("./controllers/authorizationController");
 app.use("/api/authorization", authorizationController);
 
-const { socketHandler } = require("./controllers/socketController");
-const socketIo = require("socket.io");
+app.get("/api/getUsers", (req, res) => {
+  console.log("Получение пользователей...");
+
+  const checkQuery = `SELECT * FROM users`;
+  let usersList = [];
+
+  connectionDB.query(checkQuery, (err, result) => {
+    result.forEach((user) => {
+      const newObj = {
+        UserName: user.UserName,
+        UserLogin: user.UserLogin,
+      };
+
+      usersList.push(newObj);
+    });
+    res.send(usersList);
+  });
+});
+
+app.get("/*splat", (req, res) => {
+  // res.send("<h1>Server is working...</h1>");
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+});
+
+
+
+
 
 
 
 //  ========= Server Mode ==========
 
-const IS_PRODACTION = false;
+const IS_PRODACTION = true;
 
 //  ========= Server Mode ==========
+
+
 
 
 
