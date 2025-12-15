@@ -3,12 +3,20 @@ const cookieParser = require("cookie-parser");
 const express = require("express");
 const path = require("path");
 const connectionDB = require("./controllers/dbController");
+const jwt = require("jsonwebtoken");
+const axios = require("axios");
+
+connectionDB.connect((err) => {
+  if (err) {
+    console.error("Error with database!");
+  } else {
+    console.log("Database is available!");
+  }
+});
+
 require("dotenv").config();
 
 const app = express();
-
-// app.use(express.json({ limit: '50mb' }));
-// app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(express.static(path.join(__dirname, "../client/dist")));
 app.use(bodyParser.json());
@@ -21,51 +29,105 @@ const { socketHandler } = require("./controllers/socketController");
 const socketIo = require("socket.io");
 
 const registrationController = require("./controllers/registrationController");
-app.use("/api/registration", registrationController);
-
 const authorizationController = require("./controllers/authorizationController");
+
+app.use("/api/registration", registrationController);
 app.use("/api/authorization", authorizationController);
 
-app.get("/api/getUsers", (req, res) => {
+const checkAuth = (req, res, next) => {
+  // Получаем токен из заголовка Authorization
+  const token = req.cookies.ACCESS_TOKEN;
+
+  if (!token) {
+    return res.status(401).json({ error: "Токен не предоставлен" });
+  }
+
+  try {
+    const decodeData = jwt.verify(token, process.env.SECRET_ACCESS_KEY);
+    const { login } = decodeData;
+
+    const findUserQuery = `SELECT * FROM users WHERE UserLogin = '${login}'`;
+    connectionDB.query(findUserQuery, (err, currentUser) => {
+      if (err || currentUser.length == 0) {
+        res.cookie("ACCESS_TOKEN", "", { maxAge: -1 }).status(401).send("Пользователь не найден в базе");
+      } else {
+        next();
+      }
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.cookie("ACCESS_TOKEN", "", { maxAge: -1 }).status(403).send("Токен устарел");
+  }
+};
+
+app.get("/api/getUsers", checkAuth, (req, res) => {
   console.log("Получение пользователей...");
 
   const checkQuery = `SELECT * FROM users`;
   let usersList = [];
 
-  connectionDB.query(checkQuery, (err, result) => {
-    result.forEach((user) => {
-      const newObj = {
-        UserName: user.UserName,
-        UserLogin: user.UserLogin,
-      };
+  try {
+    connectionDB.query(checkQuery, (err, result) => {
+      result.forEach((user) => {
+        const newObj = {
+          UserName: user.UserName,
+          UserLogin: user.UserLogin,
+        };
 
-      usersList.push(newObj);
+        usersList.push(newObj);
+      });
+      res.send(usersList);
     });
-    res.send(usersList);
-  });
+  } catch (error) {
+    console.log("DB ERROR:", error);
+  }
+});
+
+app.get("/api/getRTCconfig", checkAuth, async (req, res) => {
+  console.log("Получение конфигурации RTC...");
+
+  axios
+    .put(
+      "https://global.xirsys.net/_turn/LetSpeak",
+      {
+        format: "urls",
+        ttl: 86400,
+      },
+      {
+        auth: {
+          username: process.env.TURN_USERNAME,
+          password: process.env.TURN_CREDENTIAL,
+        },
+        timeout: 30000,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    )
+    .then((result) => {
+      if (result.data.s == "ok") {
+        res.status(200).json(result.data.v.iceServers);
+      } else {
+        throw new Error("Статус не ok");
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+      res.send(error);
+    });
 });
 
 app.get("/*splat", (req, res) => {
-  // res.send("<h1>Server is working...</h1>");
+  // res.send("<h1>Server ids working...</h1>");
   res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
-
-
-
-
-
-
 
 //  ========= Server Mode ==========
 
 const IS_PRODACTION = true;
 
 //  ========= Server Mode ==========
-
-
-
-
-
 
 IS_PRODACTION ? startProdaction() : startDevlopment();
 

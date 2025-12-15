@@ -182,6 +182,9 @@ module.exports = {
     socket.on("ICE_CANDIDATE", (candidate) => {
       const RoomId = Rooms.get(socket)?.RoomId;
       console.log(`ICE_CANDIDATE. Room № ${RoomId}`);
+      candidate = JSON.parse(candidate);
+      candidate.UserLogin = Rooms.get(socket)?.UserLogin;
+      candidate = JSON.stringify(candidate);
       socket.broadcast.to(RoomId).emit("ICE_CANDIDATE", candidate);
     });
 
@@ -229,10 +232,30 @@ module.exports = {
       });
     });
 
+    socket.on("JOIN_CALL", () => {
+      const RoomId = Rooms.get(socket)?.RoomId;
+      console.log(`JOIN_CALL. Room №${RoomId}`);
+      Rooms.set(socket, { ...Rooms.get(socket), inCall: true });
+
+      const roomInfo = Array.from(Rooms).map((room) => {
+        const info = room[1];
+        if (info.RoomId == RoomId) return info;
+      });
+
+      io.to(RoomId).emit("JOIN_CALL", roomInfo);
+    });
+
     socket.on("LEAVE_CALL", () => {
       const RoomId = Rooms.get(socket)?.RoomId;
+      console.log(`LEAVE_CALL. Room №${RoomId}`);
       Rooms.set(socket, { ...Rooms.get(socket), inCall: false });
-      socket.broadcast.to(RoomId).emit("LEAVE_CALL", Rooms.get(socket));
+
+      const roomInfo = Array.from(Rooms).map((room) => {
+        const info = room[1];
+        if (info.RoomId == RoomId) return info;
+      });
+
+      io.to(RoomId).emit("LEAVE_CALL", roomInfo);
     });
 
     socket.on("LEAVE_ROOM", ({ UserLogin }) => {
