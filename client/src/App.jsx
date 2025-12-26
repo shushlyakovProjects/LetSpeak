@@ -42,13 +42,13 @@ export default function App() {
       case "permissionDenied":
         notificationContent = `Отказано в доступе :(`;
         break;
+      case "warning":
+        notificationContent = object.text;
+        break;
       default:
         break;
     }
-    document.body.insertAdjacentHTML(
-      "beforeend",
-      `<article id="${id}" class="notification">${notificationContent}`
-    );
+    document.body.insertAdjacentHTML("beforeend", `<article id="${id}" class="notification">${notificationContent}`);
 
     setTimeout(() => {
       document.getElementById(id).remove();
@@ -66,8 +66,8 @@ export default function App() {
         <Routes>
           <Route path="/reg" element={<RegistrationFormContainer />} />
           <Route path="/auth" element={<AuthorizationFormContainer />} />
-          <Route path="/main/*" element={<MainContainer createNotification={createNotification}/>} />
-          <Route exact path="/" element={<MainContainer createNotification={createNotification}/>} />
+          <Route path="/main/*" element={<MainContainer createNotification={createNotification} />} />
+          <Route exact path="/" element={<MainContainer createNotification={createNotification} />} />
         </Routes>
       </UserContext>
     </>

@@ -1,5 +1,5 @@
 import style from "./Users.module.scss";
-import CameraIcon from "../../assets/icons/Camera.svg";
+import CameraIcon from "../../assets/icons/CameraClear.svg";
 
 export default function UsersPresentation({ usersList, initCall, ...props }) {
   return (

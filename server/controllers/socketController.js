@@ -181,7 +181,7 @@ module.exports = {
 
     socket.on("ICE_CANDIDATE", (candidate) => {
       const RoomId = Rooms.get(socket)?.RoomId;
-      console.log(`ICE_CANDIDATE. Room № ${RoomId}`);
+      // console.log(`ICE_CANDIDATE. Room № ${RoomId}`);
       candidate = JSON.parse(candidate);
       candidate.UserLogin = Rooms.get(socket)?.UserLogin;
       candidate = JSON.stringify(candidate);
@@ -209,10 +209,7 @@ module.exports = {
                 socket.join(RoomId);
                 Rooms.set(socket, { RoomId, UserLogin: initiatorLogin, inCall: false });
 
-                const roomInfo = Array.from(Rooms).map((room) => {
-                  const info = room[1];
-                  if (info.RoomId == RoomId) return info;
-                });
+                const roomInfo = getRoomInfoFromMap(Rooms, RoomId);
                 socket.emit("JOIN_ROOM", roomInfo);
               }
             });
@@ -222,10 +219,7 @@ module.exports = {
             socket.join(RoomId);
             Rooms.set(socket, { RoomId, UserLogin: initiatorLogin, inCall: false });
 
-            const roomInfo = Array.from(Rooms).map((room) => {
-              const info = room[1];
-              if (info.RoomId == RoomId) return info;
-            });
+            const roomInfo = getRoomInfoFromMap(Rooms, RoomId);
             socket.emit("JOIN_ROOM", roomInfo);
           }
         }
@@ -236,12 +230,7 @@ module.exports = {
       const RoomId = Rooms.get(socket)?.RoomId;
       console.log(`JOIN_CALL. Room №${RoomId}`);
       Rooms.set(socket, { ...Rooms.get(socket), inCall: true });
-
-      const roomInfo = Array.from(Rooms).map((room) => {
-        const info = room[1];
-        if (info.RoomId == RoomId) return info;
-      });
-
+      const roomInfo = getRoomInfoFromMap(Rooms, RoomId);
       io.to(RoomId).emit("JOIN_CALL", roomInfo);
     });
 
@@ -249,12 +238,7 @@ module.exports = {
       const RoomId = Rooms.get(socket)?.RoomId;
       console.log(`LEAVE_CALL. Room №${RoomId}`);
       Rooms.set(socket, { ...Rooms.get(socket), inCall: false });
-
-      const roomInfo = Array.from(Rooms).map((room) => {
-        const info = room[1];
-        if (info.RoomId == RoomId) return info;
-      });
-
+      const roomInfo = getRoomInfoFromMap(Rooms, RoomId);
       io.to(RoomId).emit("LEAVE_CALL", roomInfo);
     });
 
@@ -263,16 +247,28 @@ module.exports = {
       console.log(`LEAVE_ROOM. Пользователь ${UserLogin} отключился от комнаты №${RoomId}`);
       socket.leave(RoomId);
       Rooms.delete(socket);
-      // socket.broadcast.to(RoomId).emit("LEAVE_ROOM", UserLogin);
-      socket.broadcast.to(RoomId).emit("LEAVE_CALL", Rooms.get(socket));
+      const roomInfo = getRoomInfoFromMap(Rooms, RoomId);
+      socket.broadcast.to(RoomId).emit("LEAVE_CALL", roomInfo);
     });
     // WebRTC - Конференция
+
+    function getRoomInfoFromMap(Rooms, RoomId) {
+      const roomInfo = Array.from(Rooms).map((room) => {
+        const info = room[1];
+        if (info.RoomId == RoomId) return info;
+      });
+      return roomInfo;
+    }
 
     // Отключение
     socket.on("disconnect", () => {
       const RoomId = Rooms.get(socket)?.RoomId;
       if (RoomId) socket.leave(RoomId);
       Rooms.delete(socket);
+
+      const roomInfo = getRoomInfoFromMap(Rooms, RoomId);
+
+      socket.broadcast.to(RoomId).emit("LEAVE_ROOM", roomInfo);
       console.log(`Client with login ${socket.UserLogin} has been disconnected from Socket!`);
     });
   },

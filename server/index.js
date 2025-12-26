@@ -125,7 +125,7 @@ app.get("/*splat", (req, res) => {
 
 //  ========= Server Mode ==========
 
-const IS_PRODACTION = true;
+const IS_PRODACTION = false;
 
 //  ========= Server Mode ==========
 

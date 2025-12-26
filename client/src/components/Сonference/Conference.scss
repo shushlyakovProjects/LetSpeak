@@ -1,20 +1,24 @@
 @use "../../vars";
 
-#conference__friend-indicator {
-  padding: 5px 8px;
+#conference__indicator-friend {
   &.iAmWaiting {
-    animation: iAmWaitingAnim 2s infinite ease;
+    animation: iAmWaitingAnim 2s infinite linear;
+    // Анимация отражена зеркально, так как блок scale(-1)
     @keyframes iAmWaitingAnim {
       0% {
-        border-left: 2px solid vars.$accent_yellow_color;
+        // box-shadow: 0 -3px 3px yellow inset;
+        border-right: 2px solid vars.$accent_yellow_color;
       }
       25% {
+        // box-shadow: -3px 0 3px yellow inset;
         border-top: 2px solid vars.$accent_yellow_color;
       }
       50% {
-        border-right: 2px solid vars.$accent_yellow_color;
+        // box-shadow: 0 3px 3px yellow inset;
+        border-left: 2px solid vars.$accent_yellow_color;
       }
       75% {
+        // box-shadow: 3px 0 3px yellow inset;
         border-bottom: 2px solid vars.$accent_yellow_color;
       }
     }
@@ -23,43 +27,65 @@
   &.itIsWaiting {
     color: vars.$accent_yellow_color;
     opacity: 1 !important;
-    animation: itIsWaitingAnim 1s infinite ease;
+    animation: itIsWaitingAnim 1s infinite ease-in-out;
     @keyframes itIsWaitingAnim {
       0% {
         transform: scale(1);
       }
       25% {
-        transform: scale(1.2);
+        transform: scale(1.04);
       }
       50% {
-        transform: scale(1.1);
+        transform: scale(0.97);
+        filter: blur(1px);
       }
       60% {
-        transform: scale(1.2);
+        transform: scale(1.05);
+        filter: blur(0px);
       }
       70% {
-        transform: scale(1.1);
+        transform: scale(1.01);
       }
       80% {
-        transform: scale(1.2);
+        transform: scale(1.03);
       }
       90% {
-        transform: scale(1.1);
+        transform: scale(1.01);
       }
       100% {
         transform: scale(1);
       }
     }
   }
-
-  &.bothAreReady {
+}
+#conference__indicator-name_friend,
+#conference__indicator-name_me {
+  &.ready {
     transform: scale(1);
     color: vars.$accent_yellow_color;
     opacity: 1 !important;
   }
+
+  &.muted {
+    position: relative;
+    &::after {
+      content: "";
+      position: absolute;
+      left: 100%;
+      top: 0;
+      height: 100%;
+      aspect-ratio: 1/1;
+      background-image: url(../../assets/icons/MicrophoneDisabled.svg);
+      background-size: 70%;
+      background-repeat: no-repeat;
+      background-position: center;
+      filter: grayscale(1) brightness(5);
+      opacity: 0.3;
+    }
+  }
 }
 
-#conference__my-indicator {
+#conference__indicator {
   &.iAmWaiting {
     background-color: vars.$accent_yellow_color;
     display: inline-block;

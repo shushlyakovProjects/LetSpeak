@@ -1,29 +1,50 @@
 import { useEffect, useRef, useState } from "react";
 import СonferencePresentation from "./СonferencePresentation";
-import { useLocation, useNavigate } from "react-router-dom";
+import { data, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-export default function СonferenceContainer({ socketApi, currentUser, friendForCall, setFriendForCall }) {
+export default function СonferenceContainer({
+  createNotification,
+  socketApi,
+  currentUser,
+  friendForCall,
+  setFriendForCall,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isConnected, setIsConnected] = useState(false);
-  const [isMicrophoneEnabled, setIsMicrophoneEnabled] = useState(false);
-
+  const [iceServers, setIceServers] = useState([]);
   const [roomInfo, setRoomInfo] = useState(null);
 
-  const [remoteStream, setRemoteStream] = useState(null);
-  const [localStream, setLocalStream] = useState(null);
-  const [iceServers, setIceServers] = useState([]);
+  const remoteStream = useRef(null);
 
-  const myVoiceIndicatorRef = useRef(null);
-  const myFriendIndicatorRef = useRef(null);
+  const [isMicrophoneEnabled, setIsMicrophoneEnabled] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+
+  const [preferredVideoDeviceID, setPreferredVideoDeviceID] = useState();
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [audioDevices, setAudioDevices] = useState([]);
+
+  const isConferenceReadyRef = useRef(false);
+
+  const localAudioStreamRef = useRef(null);
+  const localVideoStreamRef = useRef(null);
+
+  const myVideoIndicatorRef = useRef(null);
+  const friendVideoIndicatorRef = useRef(null);
+  const friendVideoPlayerRef = useRef(null);
   const myFriendStatusRef = useRef(null);
+  const microphoneStatusForFriendRef = useRef(null);
 
   const analyserMyTimerRef = useRef(null);
   const analyserFriendsTimerRef = useRef(null);
 
+  const indicatorNameFriendRef = useRef(null);
+  const indicatorNameMeRef = useRef(null);
+
   const pc = useRef(null);
+  const dc = useRef(null);
 
   const publicIceServers = [
     { urls: "stun:stun.l.google.com:19302" },
@@ -49,43 +70,66 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
 
     if (!socketApi || !friendForCall) return;
 
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      setVideoDevices(devices.filter((device) => device.kind === "videoinput"));
+      setAudioDevices(devices.filter((device) => device.kind === "audioinput"));
+    });
+
     socketApi.emit("JOIN_ROOM", { initiatorLogin: currentUser.UserLogin, friendLogin: friendForCall.UserLogin });
 
     socketApi.on("JOIN_ROOM", (roomInfo) => {
       setRoomInfo(roomInfo);
       changeStatusIndicators(roomInfo);
     });
-    socketApi.on("LEAVE_ROOM", changeStatusIndicators);
-    socketApi.on("LEAVE_CALL", changeStatusIndicators);
-    socketApi.on("JOIN_CALL", changeStatusIndicators);
+    socketApi.on("LEAVE_ROOM", (roomInfo) => {
+      console.log("🚷 Собеседник покинул комнату");
+      friendVideoPlayerRef.current.srcObject = null;
+      changeStatusIndicators(roomInfo);
+    });
+    socketApi.on("LEAVE_CALL", (roomInfo) => {
+      // friendDisconneted();
+      changeStatusIndicators(roomInfo);
+    });
+    socketApi.on("JOIN_CALL", async (roomInfo) => {
+      console.log("JOIN_CALL");
+      console.log("Друг снова пришел. Мы были в звонке?", isConferenceReadyRef.current);
+
+      if (isConferenceReadyRef.current) await runConference();
+      changeStatusIndicators(roomInfo);
+    });
 
     initializationRTC();
 
     return () => {
-      pc.current?.close();
-      setFriendForCall(null);
       finishConference();
+      socketApi.emit("LEAVE_CALL");
       socketApi.emit("LEAVE_ROOM", { UserLogin: currentUser.UserLogin });
     };
   }, [socketApi, friendForCall, pc]);
 
+  useEffect(() => {
+    microphoneStatusForFriendRef.current = isMicrophoneEnabled;
+  }, [isMicrophoneEnabled]);
+
   async function getWebRTCConfig() {
+    // return [...publicIceServers];
     return axios
       .get("/api/getRTCconfig")
       .then((result) => {
-        console.log("TURN конфигурация получена...");
+        console.log("🛜 TURN конфигурация получена!");
         return [...publicIceServers, result.data];
       })
       .catch((error) => {
-        console.warn("Не удалось получить TURN конфигурацию");
+        console.warn("🛜 Не удалось получить TURN конфигурацию");
         return [...publicIceServers];
       });
   }
 
+  // ИНИЦИАЛИЗАЦИЯ RTC СОЕДИНЕНИЯ
   const initializationRTC = async () => {
-    console.log("Первичная инициализация RTC-соединения...");
+    console.log("🛰️ Первичная инициализация RTC-соединения...");
 
-    let ice = null;
+    let ice = [];
     if (!iceServers.length) {
       ice = await getWebRTCConfig();
       setIceServers(ice);
@@ -94,11 +138,12 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
     }
 
     pc.current = new RTCPeerConnection({ iceServers: ice });
+    await initializationDataChannel();
 
     socketApi.on("ICE_CANDIDATE", async (candidate) => {
       try {
         candidate = JSON.parse(candidate);
-        console.log("ICE_CANDIDATE");
+        // console.log("ICE_CANDIDATE");
         const iceCandidate = new RTCIceCandidate(candidate);
         await pc.current.addIceCandidate(iceCandidate);
       } catch (error) {
@@ -106,16 +151,33 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
       }
     });
 
-    pc.current.addEventListener("icecandidateerror", (event) => {
-      console.error("ICE кандидат ошибка:", event.errorCode, event.errorText);
-    });
+    // pc.current.addEventListener("icecandidateerror", (event) => {
+    //   console.warn("ICE кандидат ошибка:", event.errorCode, event.errorText);
+    // });
+
+    pc.current.oniceconnectionstatechange = () => {
+      const state = pc.current.iceConnectionState;
+      console.log("🌐 ICE состояние:", state);
+      switch (state) {
+        case "disconnected":
+          if (pc.current) removeRTC();
+          break;
+
+        default:
+          break;
+      }
+    };
+
+    // * При отключении от звонка, не всегда отключается микрофон
+    // * При подключении не всегда определяется статус микрофона
+    // * При подключении к активному звонку, не появляется видео
 
     pc.current.addEventListener("icecandidate", icecandidateHandler);
     pc.current.addEventListener("track", trackHandler);
   };
   function icecandidateHandler(event) {
     try {
-      console.log("Кандидаты маршрута для Peer Connection получены!");
+      // console.log("Кандидаты маршрута для Peer Connection получены!");
       if (event.candidate) {
         // console.log("Кандидат:", event.candidate.type, event.candidate.protocol, event.candidate.address);
         socketApi.emit("ICE_CANDIDATE", JSON.stringify(event.candidate));
@@ -126,17 +188,15 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
   }
   function trackHandler(event) {
     if (event.streams && event.streams[0]) {
-      console.log(event);
+      console.log(event.streams);
 
-      // status
-
-      setRemoteStream(event.streams[0]);
+      remoteStream.current = event.streams[0];
       analizeVolumeVoice(event.streams[0], "friend");
 
       const audioPlayer = new Audio();
       audioPlayer.srcObject = event.streams[0];
       audioPlayer.muted = false;
-      console.log("Пробую воспроизвести голос собеседника...");
+      console.log("🎙️ Пробую воспроизвести голос собеседника...");
       audioPlayer
         .play()
         .then(() => {
@@ -147,20 +207,183 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
             },
             { once: true }
           );
-          console.log("Воспроизведение работает");
+          console.log("🎙️ Воспроизведение работает");
         })
         .catch((err) => {
           console.error("Воспроизведение не работает:", err);
         });
+
+      console.log("🎥 Пробую воспроизвести видео собеседника...");
+      friendVideoPlayerRef.current.srcObject = event.streams[0];
+      friendVideoPlayerRef.current.play();
     }
   }
+  function removeRTC() {
+    console.log("Друг отключился, чистим соединение");
+    socketApi.off("OFFER");
+    socketApi.off("ANSWER");
+    socketApi.off("ICE_CANDIDATE");
+    clearInterval(analyserFriendsTimerRef.current);
+    if (dc.current) {
+      dc.current.close();
+      dc.current = null;
+      console.warn("❌ DataChanel ЗАКРЫТ");
+    }
+    if (pc.current) {
+      pc.current.close();
+      pc.current = null;
+      console.warn("❌ PeerConnection ЗАКРЫТ");
+    }
+  }
+  async function initializationDataChannel() {
+    dc.current = await pc.current.createDataChannel("metaChat");
 
-  const startConference = async () => {
-    try {
-      if (!pc.current && !isConnected) {
-        console.error("PeerConnection не инициализирован");
-        initializationRTC();
+    dc.current.onmessage = async (event) => {
+      const { type } = JSON.parse(event.data);
+
+      console.log(`📡 DataChannel: metaChat. Message type: ${type}`);
+
+      isConferenceReadyRef.current = true;
+
+      switch (type) {
+        case "offer":
+          console.log("Offer для обновления потока*");
+          const { offer } = JSON.parse(event.data);
+          const offerDesc = new RTCSessionDescription(offer);
+
+          console.log("PC: ", pc.current.signalingState);
+
+          await pc.current.setRemoteDescription(offerDesc);
+
+          const newAnsw = await pc.current.createAnswer();
+          await pc.current.setLocalDescription(newAnsw);
+          dc.current.send(
+            JSON.stringify({
+              type: "answer",
+              answer: newAnsw,
+            })
+          );
+          await pc.current.setRemoteDescription(offerDesc);
+          break;
+        case "answer":
+          console.log("Answer для обновления потока*");
+          const { answer } = JSON.parse(event.data);
+          await pc.current.setRemoteDescription(new RTCSessionDescription(answer));
+          break;
+        case "disableCamera":
+          console.log("Собеседник отключил камеру*");
+          friendVideoPlayerRef.current.srcObject = null;
+          break;
+        case "enableCamera":
+          console.log("Собеседник включил камеру*");
+          friendVideoPlayerRef.current.srcObject = remoteStream.current;
+          friendVideoPlayerRef.current.play();
+          break;
+        case "friendIsMuted":
+          indicatorNameFriendRef.current.classList.add("muted");
+          break;
+        case "friendIsUnmuted":
+          indicatorNameFriendRef.current.classList.remove("muted");
+          break;
+        case "friendIsLeft":
+          removeRTC();
+          break;
+        default:
+          console.warn("📡 DataChannel: metaChat. Пришло неизвестное сообщение");
+          break;
       }
+    };
+
+    pc.current.ondatachannel = (event) => {
+      const dataChannel = event.channel;
+      dc.current = event.channel;
+      console.log("📡 Получен DataChannel:", dataChannel.label);
+
+      dataChannel.onopen = async () => {
+        console.log("✅ DataChannel открыт на стороне получателя");
+
+        // Проверка аудиопотока, если есть - добавляем в RTC
+        if (localVideoStreamRef.current) {
+          localVideoStreamRef.current.getVideoTracks().forEach((track) => {
+            pc.current.addTrack(track, localVideoStreamRef.current);
+            console.log("🎞️ Видео-трек подключен успешно!");
+          });
+          await renegotiation();
+        }
+
+        if (microphoneStatusForFriendRef.current) {
+          dc.current.send(
+            JSON.stringify({
+              type: "friendIsUnmuted",
+              name: currentUser.UserLogin,
+              isMicrophoneEnabled: microphoneStatusForFriendRef.current,
+            })
+          );
+        } else {
+          dc.current.send(
+            JSON.stringify({
+              type: "friendIsMuted",
+              name: currentUser.UserLogin,
+              isMicrophoneEnabled: microphoneStatusForFriendRef.current,
+            })
+          );
+        }
+      };
+    };
+
+    console.log(`📡 DataChannel: metaChat. State: ${dc.current.readyState}`);
+  }
+
+  // ОБНОВЛЕНИЕ RTC СОЕДИНЕНИЯ
+  const renegotiation = async () => {
+    if (!pc.current) return;
+
+    try {
+      console.log("🔄 Начинаем renegotiation...");
+
+      console.log("PC: ", pc.current.signalingState);
+
+      // 1. Создаем новый offer
+      const offer = await pc.current.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+        iceRestart: true,
+      });
+      console.log("🔄 Новый offer создан");
+
+      // 2. Устанавливаем как локальное описание
+      await pc.current.setLocalDescription(offer);
+      console.log("🔄 Локальное описание установлено");
+
+      // 3. Отправляем offer собеседнику через signaling
+      if (dc.current?.readyState === "open") {
+        dc.current.send(
+          JSON.stringify({
+            type: "offer",
+            offer: pc.current.localDescription,
+          })
+        );
+        console.log("🔄 Offer отправлен собеседнику");
+      } else {
+        throw new Error("🔄 DataChannel закрыт");
+      }
+    } catch (error) {
+      console.error("🔄 Ошибка renegotiation:", error);
+    }
+  };
+
+  const runConference = async () => {
+    try {
+      if (!pc.current) {
+        if (!isConferenceReadyRef.current) {
+          console.warn("❌ PeerConnection не инициализирован");
+        } else {
+          console.warn("🔄 PeerConnection инициализируется повторно");
+        }
+        await initializationRTC();
+      }
+
+      console.log("1️⃣ Запуск конференции");
 
       // Нужен, если другой начинает общение
       socketApi.on("OFFER", async (offer) => {
@@ -184,34 +407,36 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
         try {
           const desc = new RTCSessionDescription(JSON.parse(answer));
           await pc.current.setRemoteDescription(desc);
-          myFriendIndicatorRef.current.classList.remove("waiting");
           console.log("Удалённое описание установлено!");
         } catch (err) {
           console.warn("Ошибка при установке удалённой SDP:", err);
         }
       });
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-        video: false,
-      });
-      setLocalStream(stream);
-
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = false;
-        pc.current.addTrack(track, stream);
-      });
+      if (localAudioStreamRef.current) {
+        localAudioStreamRef.current.getAudioTracks().forEach((track) => {
+          pc.current.addTrack(track, localAudioStreamRef.current);
+        });
+      } else {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+        });
+        audioStream.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+          pc.current.addTrack(track, audioStream);
+        });
+        localAudioStreamRef.current = audioStream;
+      }
 
       const offer = await pc.current.createOffer({
-        mandatory: {
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: false,
-        },
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+        iceRestart: true,
       });
 
       offer.friendLogin = friendForCall.UserLogin;
@@ -219,52 +444,100 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
 
       await pc.current.setLocalDescription(offer);
 
-      if (remoteStream) {
-        remoteStream.getTracks()?.forEach((track) => track.play());
-      }
-
       socketApi.emit("OFFER", JSON.stringify(offer));
-      socketApi.emit("JOIN_CALL");
-      setIsConnected(true);
+
+      if (!isConferenceReadyRef.current) {
+        console.log("Я присоединяюсь к звонку");
+        socketApi.emit("JOIN_CALL");
+        setIsConnected(true);
+      }
     } catch (error) {
       console.log(error);
+      finishConference();
       changeStatusIndicators(roomInfo);
     }
   };
 
+  // ЗАВЕРШЕНИЕ КОНФЕРЕНЦИИ
   const finishConference = async () => {
-    console.log("Отключение конференции...");
+    console.log("0️⃣ Завершение конференции...");
 
-    if (pc.current && remoteStream) {
+    try {
+      if (isVideoEnabled) await disableCamera();
+      if (isMicrophoneEnabled) disableMicrophone();
+      if (dc.current && dc.current.readyState == "open") {
+        dc.current.send(JSON.stringify({ type: "friendIsLeft" }));
+      }
+
+      isConferenceReadyRef.current = false;
+
+      socketApi.off("OFFER");
+      socketApi.off("ANSWER");
       socketApi.off("ICE_CANDIDATE");
-      pc.current.removeEventListener("icecandidate", icecandidateHandler);
-      pc.current.removeEventListener("track", trackHandler);
-      remoteStream.getTracks().forEach((track) => track.stop());
-      console.log("Очистка...");
-      pc.current.close();
-      pc.current = null;
+
+      clearInterval(analyserMyTimerRef.current);
+      clearInterval(analyserFriendsTimerRef.current);
+
+      if (friendVideoPlayerRef.current) {
+        friendVideoPlayerRef.current.pause();
+        friendVideoPlayerRef.current.srcObject = null;
+        friendVideoPlayerRef.current.load();
+      }
+
+      if (remoteStream.current) {
+        remoteStream.current.getTracks().forEach((track) => {
+          track.stop();
+          track.enabled = false;
+        });
+
+        document.querySelectorAll("audio, video").forEach((element) => {
+          if (element.srcObject === remoteStream.current) {
+            element.srcObject = null;
+            element.pause();
+          }
+        });
+
+        remoteStream.current = null;
+      }
+
+      if (dc.current) {
+        dc.current.close();
+        dc.current = null;
+        console.warn("❌ DataChanel ЗАКРЫТ");
+      }
+
+      if (pc.current) {
+        pc.current.close();
+        pc.current = null;
+        console.warn("❌ PeerConnection ЗАКРЫТ");
+      }
+
+      if (localAudioStreamRef.current) {
+        localAudioStreamRef.current.getTracks().forEach((track) => track.stop());
+        localAudioStreamRef.current = null;
+      }
+
+      localVideoStreamRef.current = null;
+
+      indicatorNameFriendRef.current.classList.remove("muted");
+      indicatorNameMeRef.current.classList.remove("muted");
+
+      setIsConnected(false);
+      console.warn("🅾️ Конференция отключена");
+      socketApi.emit("LEAVE_CALL");
+    } catch (error) {
+      console.log("Ошибка при завершении конференции", error);
     }
-
-    // status
-    clearInterval(analyserMyTimerRef.current);
-    clearInterval(analyserFriendsTimerRef.current);
-    setIsConnected(false);
-    setRemoteStream(null);
-    setLocalStream(null);
-    disableMicrophone();
-
-    console.log("Конференция отключена");
-    socketApi.emit("LEAVE_CALL");
   };
 
   const enableMicrophone = async () => {
     try {
-      if (!pc.current || !isConnected) {
-        console.warn("Необходимо подключиться к конференции...");
-        return;
+      if (!isConnected) {
+        console.warn("❕Необходимо подключиться к конференции...");
+        createNotification("warning", { text: "Необходимо подключиться" });
+        throw new Error("❕Необходимо подключиться к конференции...");
       }
-      console.log("Микрофон включается...");
-      // status
+      console.log("🎙️ Микрофон включается...");
 
       const senders = pc.current.getSenders();
       const audioSenders = senders.filter((sender) => sender.track && sender.track.kind === "audio");
@@ -272,12 +545,17 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
       audioSenders.forEach((sender) => {
         if (sender.track) {
           sender.track.enabled = true;
-          console.log("Аудио трек включен");
+          console.log("🎙️ Аудио трек включен");
         }
       });
 
-      analizeVolumeVoice(localStream, "me");
+      analizeVolumeVoice(localAudioStreamRef.current, "me");
       setIsMicrophoneEnabled(true);
+      indicatorNameMeRef.current.classList.remove("muted");
+
+      if (dc.current && dc.current.readyState == "open") {
+        dc.current.send(JSON.stringify({ type: "friendIsUnmuted" }));
+      }
     } catch (error) {
       clearInterval(analyserMyTimerRef.current);
       setIsMicrophoneEnabled(false);
@@ -291,10 +569,11 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
     let frequencyArray = [];
     try {
       audioCtx = new window.AudioContext();
-      const sourceNode = audioCtx.createMediaStreamSource(stream);
+
+      const sourceNode = audioCtx?.createMediaStreamSource(stream);
       analyser = audioCtx.createAnalyser();
 
-      analyser.minDecibels = -100;
+      analyser.minDecibels = -80;
       analyser.maxDecibels = 10;
       analyser.smoothingTimeConstant = 0;
 
@@ -315,13 +594,14 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
         for (let i = 0; i < frequencyArray.length; i++) {
           totalVolume += frequencyArray[i];
         }
-        const currentVolume = (totalVolume / frequencyArray.length / 10) * 0.8 + 0.6;
+
+        const currentVolume = (totalVolume / frequencyArray.length / 10) * 0.8 + 0.5;
 
         if (whoIsTalk == "me") {
-          myVoiceIndicatorRef.current.style.cssText = `box-shadow: 0 0 ${10 * currentVolume}px yellow`;
+          myVideoIndicatorRef.current.style.cssText = `box-shadow: 0 0 ${5 * currentVolume}px yellow`;
         }
         if (whoIsTalk == "friend") {
-          myFriendIndicatorRef.current.style.cssText = `box-shadow: 0 0 ${10 * currentVolume}px yellow`;
+          friendVideoIndicatorRef.current.style.cssText = `box-shadow: 0 0 ${5 * currentVolume}px yellow`;
         }
       }
     } catch (error) {
@@ -332,9 +612,15 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
 
   const disableMicrophone = () => {
     try {
-      console.log("Микрофон отключается...");
+      console.log("🎙️ Микрофон отключается...");
 
       if (!pc.current || !isConnected) return;
+
+      clearInterval(analyserMyTimerRef.current);
+      setIsMicrophoneEnabled(false);
+      indicatorNameMeRef.current.classList.add("muted");
+      myVideoIndicatorRef.current.style.cssText = `box-shadow: none;`;
+      localAudioStreamRef.current = null;
 
       const senders = pc.current.getSenders();
       const audioSenders = senders.filter((sender) => sender.track && sender.track.kind === "audio");
@@ -342,66 +628,189 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
       audioSenders.forEach((sender) => {
         if (sender.track) {
           sender.track.enabled = false;
-          console.log("Аудио трек отключен");
+          console.log("🎙️ Аудио трек отключен");
         }
       });
 
-      clearInterval(analyserMyTimerRef.current);
-      setIsMicrophoneEnabled(false);
-      myVoiceIndicatorRef.current.style.cssText = `box-shadow: none;`;
+      if (dc.current && dc.current.readyState == "open") {
+        dc.current.send(JSON.stringify({ type: "friendIsMuted" }));
+      }
     } catch (error) {
-      console.log(error);
+      console.log("Ошибка при отключении микрофона", error);
+    }
+  };
+
+  const enableCamera = async (newDeviceId) => {
+    console.log("🎞️ Включение камеры...");
+
+    try {
+      const videoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { exact: newDeviceId ? newDeviceId : preferredVideoDeviceID },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
+        },
+      });
+
+      const newVideoTrack = videoStream.getVideoTracks()[0];
+      if (!newVideoTrack) {
+        throw new Error("🎞️ Не удалось получить видео-трек из нового потока");
+      }
+
+      if (pc.current) {
+        const videoSender = pc.current.getSenders().find((s) => s.track?.kind === "video");
+        const oldVideoTrack = videoSender?.track;
+
+        if (videoSender) {
+          await videoSender.replaceTrack(newVideoTrack);
+          console.log("🎞️ Видео-трек заменен успешно!");
+          oldVideoTrack.stop();
+
+          videoStream
+            .getTracks()
+            .filter((track) => track !== newVideoTrack)
+            .forEach((track) => track.stop());
+        } else {
+          videoStream.getVideoTracks().forEach((track) => {
+            pc.current.addTrack(track, videoStream);
+            console.log("🎞️ Видео-трек подключен успешно!");
+          });
+        }
+      } else {
+        console.warn("PeerConnection отсутсвует. Камера переподключена локально...");
+      }
+
+      myVideoIndicatorRef.current.srcObject = videoStream;
+      myVideoIndicatorRef.current.play();
+      localVideoStreamRef.current = videoStream;
+      setIsVideoEnabled(true);
+
+      console.log(dc.current);
+
+      if (!dc.current || dc.current.readyState != "open") {
+        await initializationDataChannel();
+      }
+
+      dc.current.send(JSON.stringify({ type: "enableCamera" }));
+      await renegotiation();
+    } catch (error) {
+      console.error("Ошибка при включении камеры", error);
+    }
+  };
+
+  const disableCamera = async () => {
+    try {
+      console.log("🎞️ Камера отключается...");
+
+      if (!isVideoEnabled) {
+        throw new Error("Камера уже отключена...");
+      }
+
+      if (localVideoStreamRef.current) {
+        localVideoStreamRef.current.getVideoTracks().forEach((track) => {
+          track.stop();
+          track.enabled = false;
+        });
+      }
+
+      const videoSender = pc.current.getSenders().find((s) => s.track?.kind === "video");
+
+      if (videoSender ?? pc.current) {
+        await videoSender.replaceTrack(null);
+        console.log("🎞️ Видео-трек заменен (null) успешно!");
+      }
+
+      if (!dc.current || dc.current.readyState != "open") {
+        await initializationDataChannel();
+      }
+
+      dc.current.send(JSON.stringify({ type: "disableCamera" }));
+      await renegotiation();
+    } catch (error) {
+      console.log("Ошибка при отключении камеры", error);
+    } finally {
+      setIsVideoEnabled(false);
+      myVideoIndicatorRef.current.srcObject = null;
+      myVideoIndicatorRef.current.pause();
+      localVideoStreamRef.current = null;
+    }
+  };
+
+  const switchSource = async (type, newDeviceId) => {
+    console.log(`Смена потока типа ${type}`);
+
+    // ДОДЕЛАТЬ СМЕНУ ИСТОЧНИКА ЗВУКА
+
+    if (type == "video") {
+      enableCamera(newDeviceId);
+      setPreferredVideoDeviceID(newDeviceId);
     }
   };
 
   const changeStatusIndicators = (roomInfo) => {
     // iAmWaiting - ожидаю ответа собеседника
     // itIsWaiting - собеседник ждет меня
-    // bothAreReady - оба готовы
+
+    console.log("💡 Обновление индикаторов");
 
     try {
-      if (!myVoiceIndicatorRef.current || !myFriendIndicatorRef.current) {
-        throw new Error("Индикаторы размонтированы");
+      if (!myVideoIndicatorRef.current || !friendVideoPlayerRef.current) {
+        throw new Error("💡 Индикаторы размонтированы");
       }
 
-      const me = roomInfo.find((user) => user?.UserLogin == currentUser.UserLogin)?.inCall;
-      const friend = roomInfo.find((user) => user?.UserLogin == friendForCall.UserLogin)?.inCall;
+      let me, friend;
+
+      if (roomInfo != null) {
+        me = roomInfo.find((user) => user?.UserLogin == currentUser.UserLogin)?.inCall;
+        friend = roomInfo.find((user) => user?.UserLogin == friendForCall.UserLogin)?.inCall;
+      } else {
+        me = false;
+        friend = false;
+      }
 
       if (!me && !friend) {
-        console.log("Никого нет в звонке");
+        console.log("💡 Никого нет в звонке");
         clearInterval(analyserFriendsTimerRef.current);
-        myFriendStatusRef.current.innerText = "";
-        myVoiceIndicatorRef.current.style.cssText = `box-shadow: none;`;
-        myFriendIndicatorRef.current.style.cssText = `box-shadow: none;`;
-        myFriendIndicatorRef.current.classList.remove("iAmWaiting", "itIsWaiting", "bothAreReady");
-        myVoiceIndicatorRef.current.classList.remove("iAmWaiting");
+        myFriendStatusRef.current.innerText = "*Тишина, сверчки*";
+        myVideoIndicatorRef.current.style.cssText = `box-shadow: none;`;
+        friendVideoIndicatorRef.current.style.cssText = `box-shadow: none;`;
+        friendVideoIndicatorRef.current.classList.remove("iAmWaiting", "itIsWaiting");
+        indicatorNameFriendRef.current.classList.remove("ready");
+        indicatorNameMeRef.current.classList.remove("ready");
+        friendVideoPlayerRef.current.srcObject = null;
       }
 
       if (me && !friend) {
-        console.log("Я в звонке, собеседник - нет");
+        console.log("💡 Я в звонке, собеседник - нет");
         clearInterval(analyserFriendsTimerRef.current);
         myFriendStatusRef.current.innerText = "Ожидаем ответа...";
-        myFriendIndicatorRef.current.style.cssText = `box-shadow: none;`;
-        myFriendIndicatorRef.current.classList.remove("itIsWaiting", "bothAreReady");
-        myFriendIndicatorRef.current.classList.add("iAmWaiting");
-        myVoiceIndicatorRef.current.classList.add("iAmWaiting");
+        friendVideoIndicatorRef.current.style.cssText = `box-shadow: none;`;
+        friendVideoIndicatorRef.current.classList.remove("itIsWaiting");
+        friendVideoIndicatorRef.current.classList.add("iAmWaiting");
+        indicatorNameFriendRef.current.classList.remove("ready");
+        indicatorNameMeRef.current.classList.add("ready");
+        indicatorNameFriendRef.current.classList.remove("muted");
+        friendVideoPlayerRef.current.srcObject = null;
       }
 
       if (!me && friend) {
-        console.log("Собеседник в звонке, я - нет");
-        myFriendStatusRef.current.innerText = "Вам звонит";
-        myFriendIndicatorRef.current.style.cssText = `box-shadow: none;`;
-        myFriendIndicatorRef.current.classList.remove("iAmWaiting", "bothAreReady");
-        myFriendIndicatorRef.current.classList.add("itIsWaiting");
-        myVoiceIndicatorRef.current.classList.remove("iAmWaiting");
+        console.log("💡 Собеседник в звонке, я - нет");
+        myFriendStatusRef.current.innerText = "Вам звонят!";
+        friendVideoIndicatorRef.current.style.cssText = `box-shadow: none;`;
+        friendVideoIndicatorRef.current.classList.remove("iAmWaiting");
+        friendVideoIndicatorRef.current.classList.add("itIsWaiting");
+        indicatorNameFriendRef.current.classList.add("ready");
+        indicatorNameMeRef.current.classList.remove("ready");
       }
 
       if (me && friend) {
-        console.log("Оба в звонке");
-        myFriendStatusRef.current.innerText = "Ваш собеседник:";
-        myFriendIndicatorRef.current.classList.remove("iAmWaiting", "itIsWaiting");
-        myFriendIndicatorRef.current.classList.add("bothAreReady");
-        myVoiceIndicatorRef.current.classList.add("iAmWaiting");
+        console.log("💡 Оба в звонке");
+        myFriendStatusRef.current.innerText = "Соединение установлено!";
+        friendVideoIndicatorRef.current.classList.remove("iAmWaiting", "itIsWaiting");
+        indicatorNameFriendRef.current.classList.add("ready");
+        indicatorNameMeRef.current.classList.add("ready");
+        indicatorNameFriendRef.current.classList.remove("muted");
       }
     } catch (error) {
       console.warn(error);
@@ -410,18 +819,35 @@ export default function СonferenceContainer({ socketApi, currentUser, friendFor
 
   return (
     <СonferencePresentation
+      currentUser={currentUser}
       iceServers={iceServers}
-      startConference={startConference}
-      finishConference={finishConference}
-      disableMicrophone={disableMicrophone}
-      enableMicrophone={enableMicrophone}
       friendForCall={friendForCall}
-      myVoiceIndicatorRef={myVoiceIndicatorRef}
-      myFriendIndicatorRef={myFriendIndicatorRef}
       myFriendStatusRef={myFriendStatusRef}
       isConnected={isConnected}
+      remoteStream={remoteStream.current}
+      //
+      runConference={runConference}
+      finishConference={finishConference}
+      //
       isMicrophoneEnabled={isMicrophoneEnabled}
-      remoteStream={remoteStream}
+      disableMicrophone={disableMicrophone}
+      enableMicrophone={enableMicrophone}
+      //
+      isVideoEnabled={isVideoEnabled}
+      enableCamera={enableCamera}
+      disableCamera={disableCamera}
+      //
+      myVideoIndicatorRef={myVideoIndicatorRef}
+      //
+      friendVideoIndicatorRef={friendVideoIndicatorRef}
+      friendVideoPlayerRef={friendVideoPlayerRef}
+      //
+      videoDevices={videoDevices}
+      audioDevices={audioDevices}
+      switchSource={switchSource}
+      //
+      indicatorNameFriendRef={indicatorNameFriendRef}
+      indicatorNameMeRef={indicatorNameMeRef}
     ></СonferencePresentation>
   );
 }
